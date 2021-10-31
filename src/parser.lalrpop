@@ -1,7 +1,0 @@
-use crate::zone::{Zone, Scene};
-
-grammar;
-
-pub Zone: Zone = {
-    
-};

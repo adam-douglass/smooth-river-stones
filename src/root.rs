@@ -1,38 +1,22 @@
-use std::collections::{HashMap, VecDeque};
+use std::rc::Rc;
 
 use yew::{Component, ComponentLink, Html, ShouldRender, html};
 use yew::services::fetch::{FetchTask, FetchService, Request, Response};
 use yew::format::{Nothing, Text};
 
-use crate::nom_zone::{build_world, Zone};
+use crate::display::Display;
+use crate::zone::{build_world, Zone};
 
 pub enum Message {
     ZoneLoad(String),
     ZoneLoadError(anyhow::Error)
 }
 
-pub struct State {
-    log: VecDeque<String>,
-    scene: Vec<String>,
-    line: u32,
-}
-
-impl State {
-    pub fn new() -> Self {
-        Self {
-            log: Default::default(),
-            scene: vec![String::from("default")],
-            line: 0
-        }
-    }
-}
-
 pub struct Root {
     link: ComponentLink<Self>,
     zone_fetch: Option<FetchTask>,
-    zone: Option<Zone>,
     load_error: Option<anyhow::Error>,
-    state: State,
+    zone: Option<Rc<Zone>>,
 }
 
 impl Component for Root {
@@ -59,7 +43,6 @@ impl Component for Root {
             zone_fetch: Some(task),
             zone: None,
             load_error: None,
-            state: State::new()
         }
     }
 
@@ -90,7 +73,7 @@ impl Component for Root {
         match &self.zone {
             Some(zone) => {
                 html! {
-                    <div class="content">{"Loaded"}</div>
+                    <Display zone={zone} />
                 }
             },
             None => {
