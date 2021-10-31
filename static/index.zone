@@ -1,0 +1,29 @@
+
+default:
+    Your prison cell is cold.
+    There is a heavy wooden door and a filthy pile of rags.
+
+free-time: ??
+    You have lots of free time.
+    (#search >= 1) [scrounge | Search for something you can use.]
+    (#search < 1) [search | Search for a way out.]
+    [later | Give in and try to sleep.] Maybe tomorrow will be better.   
+    search:
+        There is no escape.
+        Even if you got out the door, you would need to go out past the guards.
+    meditate:
+        You seek to focus your mind's eye, but the whole jail thing kinda has you too sad to focus.
+    scrounge: ?? 
+        You hunt around your tiny space.
+        (#dust < 3) [dust | Even dust is <i>something</i>.]
+        (#rag < 3) [rag | Gather up some rags.]
+        [free-time | There is nothing of value.]
+        dust:
+            You scoop some dust into your pockets.
+            *item +dust
+        rag:
+            You wrap the scattered rags about yourself.
+            *item +rag     
+
+later:
+    Someone comes to visit.
