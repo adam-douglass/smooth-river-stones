@@ -1,5 +1,6 @@
 use std::rc::Rc;
 
+use yew::services::ConsoleService;
 use yew::{Component, ComponentLink, Html, ShouldRender, html};
 use yew::services::fetch::{FetchTask, FetchService, Request, Response};
 use yew::format::{Nothing, Text};
@@ -25,7 +26,17 @@ impl Component for Root {
 
     fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
 
-        let request = Request::get("http://localhost:8080/static/index.zone")
+        let host = match yew::utils::origin() {
+            Ok(h) => h,
+            Err(err) => {
+                ConsoleService::error(&format!("Issue finding own host: {}", err));
+                "http://localhost:8080".to_string()
+            },
+        };
+        let url = host + "/static/index.zone";
+        ConsoleService::info(&format!("Loading zone at: {}", url));
+        
+        let request = Request::get(url)
             .body(Nothing)
             .expect("Could not build that request.");
 

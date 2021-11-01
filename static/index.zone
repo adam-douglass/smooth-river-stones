@@ -28,7 +28,10 @@ free-time: ??
             
         rag:
             You wrap the scattered rags about yourself.
-            *item +rag     
+            *item +rag
 
 later:
-    Someone comes to visit.
+    The door shuddered before pulling open. Someone had come to visit.
+    ($dust >= 2) "Well there, filthy aren't we." sneers the guard.
+    ($dust < 2) "Get up. Show some respect to your betters." the guard greets you.
+    A short man, wrapped in a heavy fur coat, was behind him.

@@ -6,7 +6,7 @@ use nom::character::complete::{alphanumeric1, digit1, line_ending};
 use nom::error::{VerboseError, convert_error};
 use nom::multi::{many0, many1, many_till};
 use nom::sequence::{pair, tuple};
-use nom::bytes::complete::{is_a, tag};
+use nom::bytes::complete::{is_a, is_not, tag};
 use nom::{IResult, Err};
 use nom::combinator::{eof, opt};
 
@@ -52,26 +52,26 @@ enum FilterOperation {
 }
 
 #[derive(Debug)]
-struct LineFilter {
+pub struct LineFilter {
     operation: FilterOperation
 }
 
 #[derive(Debug)]
-struct TextLink {
+pub struct TextLink {
     destination: String,
     text: String
 }
 
 #[derive(Debug)]
-enum TextPart {
+pub enum TextPart {
     Link(TextLink),
     Text(String)
 }
 
 #[derive(Debug)]
 pub struct TextLine {
-    filter: Option<LineFilter>,
-    parts: Vec<TextPart>
+    pub filter: Option<LineFilter>,
+    pub parts: Vec<TextPart>
 }
 
 #[derive(Debug)]
@@ -82,21 +82,41 @@ pub enum Line {
 
 #[derive(Debug)]
 pub struct Scene {
-    label: String,
-    next: String,
-    branch: bool,
-    lines: Vec<Line>,
+    pub label: String,
+    pub branch: bool,
+    pub lines: Vec<Line>,
     sections: Vec<Scene>
 }
 
-enum  Entry {
-    Line(Line),
-    Scene(Scene)
+impl Scene {
+    pub fn find_section(&self, name: &String) -> &Scene {
+        for part in &self.sections {
+            if &part.label == name {
+                return part
+            }
+        }
+        panic!()
+    }
 }
 
 #[derive(Debug)]
 pub struct Zone {
     scenes: Vec<Scene>
+}
+
+impl Zone {
+    pub fn find_scene(&self, name: &String) -> &Scene {
+        for sec in &self.scenes {
+            if &sec.label == name {
+                return sec;
+            }
+        }
+        panic!{}
+    }
+
+    pub fn link_to(&self, at: &Vec<String>, link: String) -> Vec<String> {
+        todo!{}
+    }
 }
 
 
@@ -126,10 +146,16 @@ pub fn build_world(data: String) -> Option<Rc<Zone>> {
 
 type Result<'a, T> = IResult<&'a str, T, VerboseError<&'a str>>;
 
+enum  Entry {
+    Line(Line),
+    Scene(Scene)
+}
+
 // zone = ${ SOI ~ empty_line* ~ scene* ~ whitespace? ~ EOI }
 fn parse_zone(input: &str) -> Result<Zone> {
     let (input, _) = many0(line_end)(input)?;
     let (input, (values, _)) = many_till(parse_scene, eof)(input)?;
+
     Ok((input, Zone{
         scenes: values
     }))
@@ -144,6 +170,7 @@ fn parse_scene(input: &str) -> Result<Scene> {
     let (input, (label, _, query, _, entries)) = tuple((
         label, skip_ws, opt(tag("??")), many1(line_end), dialog_multiple_lines
     ))(input)?;
+
     let mut lines = Vec::new();
     let mut sections = Vec::new();
     for entry in entries {
@@ -153,9 +180,16 @@ fn parse_scene(input: &str) -> Result<Scene> {
         }
     }
 
+    // let renames = HashMap::<String, String>::new();
+    // for sec in &sections {
+    //     renames.insert(sec.label, label + &sec.label);
+    // }
+    // for sec in &mut sections {
+    //     sec.rename(renames);
+    // }
+
     Ok((input, Scene {
         label,
-        next: Default::default(),
         branch: query.is_some(),
         lines,
         sections,
@@ -171,7 +205,12 @@ fn label(input: &str) -> Result<String> {
 // line_end = _{ whitespace? ~ endl }
 // empty_line = _{ line_end | COMMENT }
 fn line_end(input: &str) -> Result<()> {   
-    let (input, _) = pair(many0(tag(" ")), line_ending)(input)?;
+    let (input, _) = tuple((many0(tag(" ")), opt(comment), line_ending))(input)?;
+    Ok((input, ()))
+}
+
+fn comment(input: &str) -> Result<()> {   
+    let (input, _) = tuple((tag("---"), is_not("\n\r")))(input)?;
     Ok((input, ()))
 }
 
@@ -406,7 +445,6 @@ fn count_items(input: &str) -> Result<FilterOperation> {
     Ok((input, FilterOperation::CountItems(content)))
 }
 
-// count_visits = { "$" ~ symbol }
 fn count_visits(input: &str) -> Result<FilterOperation> {
     let (input, (_, content)) = pair(tag("#"), symbol)(input)?;
     Ok((input, FilterOperation::CountVisits(content)))

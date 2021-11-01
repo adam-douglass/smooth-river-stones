@@ -1,0 +1,16 @@
+body {
+    height: 100vh;
+    padding: 0;
+    margin: 0;
+}
+
+.fullheight {
+    height: 100vh;
+}
+
+.logarea {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: end;
+}
