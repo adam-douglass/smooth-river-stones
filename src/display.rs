@@ -120,21 +120,21 @@ impl Display {
         if scene.branch {
             html! {
                 <div class="next-area">
-                    <div class="button" enabled="false">
+                    <button class="button" disabled={true} style="cursor: auto">
                         <span class="icon">
                             <ion-icon size="large" name="help-circle"></ion-icon>
                         </span>
-                    </div>
+                    </button>
                 </div>
             }
         } else {
             html! {
                 <div class="next-area">
-                    <div class="button" onclick={self.link.callback(Message::NextLine)}>
+                    <button class="button" onclick={self.link.callback(Message::NextLine)}>
                         <span class="icon pulsing">
                             <ion-icon size="large" name="caret-forward"></ion-icon>
                         </span>
-                    </div>
+                    </button>
                 </div>
             }
         }
