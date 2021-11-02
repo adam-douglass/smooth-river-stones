@@ -1,16 +1,21 @@
+use std::collections::HashMap;
 use std::iter::Scan;
 use std::ops::Add;
 use std::{collections::VecDeque, rc::Rc};
 
+use web_sys::MouseEvent;
+use yew::services::ConsoleService;
 use yew::{Component, ComponentLink, Html, Properties, html};
 
-use crate::zone::{Line, LineFilter, Scene, TextLine, TextPart, Zone};
+use crate::zone::{Command, Line, LineFilter, Scene, TextLine, TextPart, Zone};
 use crate::raw::Raw;
 
 pub struct State {
     log: VecDeque<String>,
     scene: Vec<String>,
-    line: u32,
+    line: usize,
+    inventory: HashMap<String, i32>,
+    visits: HashMap<Vec<String>, u32>,
 }
 
 impl State {
@@ -18,7 +23,9 @@ impl State {
         Self {
             log: Default::default(),
             scene: vec![String::from("default")],
-            line: 0
+            line: 0,
+            inventory: Default::default(),
+            visits: Default::default(),
         }
     }
 }
@@ -26,7 +33,7 @@ impl State {
 
 pub enum Message {
     LinkClick,
-    NextLine,
+    NextLine(MouseEvent),
 }
 
 #[derive(Properties, Clone)]
@@ -39,6 +46,8 @@ pub struct Display {
     zone: Rc<Zone>,
     state: State,
 }
+
+type DoAdvanceLine = bool;
 
 impl Display {
     fn build_logs(&self) -> Html {
@@ -63,7 +72,7 @@ impl Display {
         }
     }
     fn build_inventory(&self) -> Html {
-        html!{<Raw inner_html={"things"} />}
+        html!{<div></div>}
     }
 
     fn current_scene(&self) -> &Scene {
@@ -105,6 +114,111 @@ impl Display {
     fn check_filter(&self, filter: &LineFilter) -> bool {
         todo!()
     }
+
+    fn next_button(&self) -> Html {
+        let scene = self.current_scene();
+        if scene.branch {
+            html! {
+                <div class="next-area">
+                    <div class="button" enabled="false">
+                        <span class="icon">
+                            <ion-icon size="large" name="help-circle"></ion-icon>
+                        </span>
+                    </div>
+                </div>
+            }
+        } else {
+            html! {
+                <div class="next-area">
+                    <div class="button" onclick={self.link.callback(Message::NextLine)}>
+                        <span class="icon pulsing">
+                            <ion-icon size="large" name="caret-forward"></ion-icon>
+                        </span>
+                    </div>
+                </div>
+            }
+        }
+    }
+
+    fn publish_current(&mut self){
+        self.state.log.push_back({
+            let scene = self.current_scene();
+            if scene.branch {
+                return
+            } 
+            let line = &scene.lines[self.state.line];
+            self.render_active(line)
+        });
+    }
+
+    fn advance_line(&mut self, inc: bool) {
+        if inc {
+            self.state.line += 1;
+        }
+        let scene = { (*self.current_scene()).clone() };
+        if scene.branch {
+            return;
+        }
+
+        // Reached the end
+        if scene.lines.len() <= self.state.line {
+            self.advance_scene();
+        }
+
+        match &scene.lines[self.state.line] {
+            Line::TextLine(line) => {
+                // Skip lines that are filtered
+                if let Some(filter) = &line.filter {
+                    if !self.check_filter(filter) {
+                        self.advance_line(true);
+                    }
+                }
+            },
+            Line::CommandLine(command) => {
+                // Execute command line
+                if self.execute_command(command) {
+                    self.advance_line(true);
+                }
+            },
+        }
+    }
+
+    fn advance_scene(&mut self){
+        self.state.line = 0;
+        let old_name = self.state.scene.pop().unwrap_or(String::from("default"));
+        if self.state.scene.len() == 0 {
+            self.state.scene.push(self.zone.next(&old_name));
+        } else {
+            self.state.scene.push(self.zone.next_in(&self.state.scene, &old_name));
+        }
+        self.state.visits.insert(self.state.scene.clone(), 1 + self.count_visits(&self.state.scene));
+        self.advance_line(false);
+    }
+
+    fn execute_command(&mut self, command: &Command) -> DoAdvanceLine {
+        match command {
+            Command::Item(items) => {
+                for (key, value) in items.change.iter() {
+                    self.state.inventory.insert(key.clone(), self.count_item(key) + value);
+                }
+                true
+            },
+        }
+    }
+
+    fn count_item(&self, name: &String) -> i32 {
+        match self.state.inventory.get(name) {
+            Some(value) => *value,
+            None => 0,
+        }
+    }
+
+    fn count_visits(&self, name: &Vec<String>) -> u32 {
+        match self.state.visits.get(name) {
+            Some(value) => *value,
+            None => 0,
+        }
+    }
 }
 
 impl Component for Display {
@@ -115,14 +229,19 @@ impl Component for Display {
         Self {
             link,
             zone: props.zone,
-            state: State::new()
+            state: State::new(),
         }
     }
 
     fn update(&mut self, msg: Self::Message) -> yew::ShouldRender {
         match msg {
             Message::LinkClick => todo!(),
-            Message::NextLine => todo!(),
+            Message::NextLine(_) => {
+                ConsoleService::info("Next line");
+                self.publish_current();
+                self.advance_line(true);
+                true
+            },
         }
     }
 
@@ -136,7 +255,10 @@ impl Component for Display {
                 <div class="column is-1"></div>
                 <div class="column fullheight">
                     <div style="height:60%">{self.build_logs()}</div>
-                    <div>{self.build_inventory()}</div>
+                    <div class="row">
+                        {self.next_button()}
+                        {self.build_inventory()}
+                    </div>
                 </div>
             </div>
         }

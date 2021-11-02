@@ -14,3 +14,26 @@ body {
     flex-direction: column;
     justify-content: end;
 }
+
+.next-area {
+    padding: 5em;
+}
+
+.pulsing {
+    animation: pulse 4s infinite;
+    animation-timing-function: ease-in-out;
+}
+
+@keyframes pulse {
+    0% {
+		opacity: 1;
+	}
+
+	50% {
+        opacity: 0.5;
+    }
+
+	100% {
+        opacity: 1;
+    }
+}

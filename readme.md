@@ -21,4 +21,4 @@ A micro game engine for choose your own adventure stories.
 
 ## Bugs
 
-- trailing lines with whitespace
+- trailing lines with whitespace in zone

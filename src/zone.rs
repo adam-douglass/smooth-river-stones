@@ -12,17 +12,17 @@ use nom::combinator::{eof, opt};
 
 use yew::services::ConsoleService;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ItemCommand {
-    change: HashMap<String, i32>
+    pub change: HashMap<String, i32>
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Command {
     Item(ItemCommand)
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum Ops {
     Add,
     Sub,
@@ -36,14 +36,14 @@ enum Ops {
     Ne,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct OperatorCall {
     operator: Ops,
     left: FilterOperation,
     right: FilterOperation,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum FilterOperation {
     OperatorCall(Box<OperatorCall>),
     IntLiteral(i32),
@@ -51,36 +51,36 @@ enum FilterOperation {
     CountItems(String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LineFilter {
     operation: FilterOperation
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TextLink {
     destination: String,
     text: String
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum TextPart {
     Link(TextLink),
     Text(String)
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TextLine {
     pub filter: Option<LineFilter>,
     pub parts: Vec<TextPart>
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Line {
     TextLine(TextLine),
     CommandLine(Command)
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Scene {
     pub label: String,
     pub branch: bool,
@@ -115,6 +115,21 @@ impl Zone {
     }
 
     pub fn link_to(&self, at: &Vec<String>, link: String) -> Vec<String> {
+        todo!{}
+    }
+
+    pub fn next(&self, last: &String) -> String {
+        let mut previous = String::from("");
+        for sec in &self.scenes {
+            if previous == *last {
+                return sec.label.clone();
+            }
+            previous = sec.label.clone();
+        }
+        panic!()
+    }
+
+    pub fn next_in(&self, path: &Vec<String>, last: &String) -> String {
         todo!{}
     }
 }
