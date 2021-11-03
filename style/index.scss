@@ -9,10 +9,11 @@ body {
 }
 
 .logarea {
-    min-height: 100%;
+    height: 100%;
     display: flex;
     flex-direction: column;
     justify-content: end;
+    overflow-y: auto;
 }
 
 .next-area {
@@ -46,4 +47,24 @@ body {
 .inline-disabled-button {
     text-decoration: underline dotted;
     
+}
+
+.main-column {
+    display: flex;
+    flex-direction: column;
+}
+
+.added-text {
+    animation: arrive 0.2s;
+    animation-timing-function: ease-in;
+}
+
+@keyframes arrive {
+    0% {
+		opacity: 0.2;
+	}
+
+	100% {
+        opacity: 1;
+    }
 }

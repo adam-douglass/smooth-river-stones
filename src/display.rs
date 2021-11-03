@@ -67,16 +67,16 @@ impl Display {
             let mut lines = Vec::new();
             for ll in &scene.lines {
                 if let Some(view) = self.render_active(ll) {
-                    lines.push(html!{<div class="content ">{view}</div>})
+                    lines.push(html!{<div class="content added-text">{view}</div>})
                 }
             }
             html!{<>{lines}</>}
         } else {
             let line = &scene.lines[self.state.line as usize];
             if let Some(view) = self.render_active(line) {
-                html!{<div class="content">{view}</div>}
+                html!{<div class="content added-text">{view}</div>}
             } else {
-                html!{<div class="content"></div>}
+                html!{<div class="content added-text"></div>}
             }
         }
     }
@@ -310,7 +310,7 @@ impl Component for Display {
         html!{
             <div class="columns fullheight">
                 <div class="column is-1"></div>
-                <div class="column fullheight">
+                <div class="column fullheight main-column">
                     <div style="height:60%">{self.build_logs()}</div>
                     <div class="row">
                         {self.next_button()}
