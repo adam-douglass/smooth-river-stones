@@ -9,15 +9,12 @@ A micro game engine for choose your own adventure stories.
 
 ## Expected features
 
-- blinking cursor
 - click anywhere to advance
+    - space
 - autosave/load place 
 - scroll back 
-- options
-- inventory
 - hidden variables
-- visit counting
-- lint/validate links, item names
+- item details
 
 ## Bugs
 

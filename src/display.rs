@@ -81,7 +81,12 @@ impl Display {
         }
     }
     fn build_inventory(&self) -> Html {
-        html!{<div></div>}
+        let tags: Vec<Html> = self.state.inventory.iter().map(|(name, count)| html!{
+            <span>{count}{" x "}<span class="tag">{name.clone()}</span></span>
+        }).collect();
+        html!{<div>
+            {tags}
+        </div>}
     }
 
     fn current_scene(&self) -> &Scene {
