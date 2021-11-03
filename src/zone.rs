@@ -12,6 +12,16 @@ use nom::combinator::{eof, opt};
 
 use yew::services::ConsoleService;
 
+fn parent(val: &String) -> String {
+    match val.rfind('.') {
+        Some(point) => {
+            val[0..point].to_string()
+        },
+        None => String::from(""),
+    }
+}
+
+
 #[derive(Debug, Clone)]
 pub struct ItemCommand {
     pub change: HashMap<String, i32>
@@ -85,53 +95,147 @@ pub struct Scene {
     pub label: String,
     pub branch: bool,
     pub lines: Vec<Line>,
-    sections: Vec<Scene>
 }
 
 impl Scene {
-    pub fn find_section(&self, name: &String) -> &Scene {
-        for part in &self.sections {
-            if &part.label == name {
-                return part
+    fn _update_labels(&mut self, names: &Vec<String>){
+        self.lines = self.lines.clone().into_iter().map(|mut line|{
+            match &mut line {
+                Line::TextLine(text) => {
+                    if let Some(filter) = &mut text.filter {
+                        self._update_filter_operation_labels(&names, &mut filter.operation);
+                    }
+                    for part in &mut text.parts {
+                        match part {
+                            TextPart::Link(link) => {
+                                link.destination = self._fix_label(&names, &link.destination)
+                            },
+                            TextPart::Text(_) => {},
+                        }
+                    }
+                },
+                Line::CommandLine(command) => {
+                    match command {
+                        Command::Item(_) => {},
+                    }
+                },
             }
+            line
+        }).collect();
+
+        // for line in self.lines.iter_mut() {
+        //     match line {
+        //         Line::TextLine(text) => {
+        //             if let Some(filter) = &mut text.filter {
+        //                 self._update_filter_operation_labels(&names, &mut filter.operation);
+        //             }
+        //             for part in &mut text.parts {
+        //                 match part {
+        //                     TextPart::Link(link) => {
+        //                         link.destination = self._fix_label(&names, &link.destination)
+        //                     },
+        //                     TextPart::Text(_) => {},
+        //                 }
+        //             }
+        //         },
+        //         Line::CommandLine(command) => {
+        //             match command {
+        //                 Command::Item(_) => {},
+        //             }
+        //         },
+        //     }
+        // }
+    }
+
+    fn _update_filter_operation_labels(&mut self, names: &Vec<String>, op: &mut FilterOperation) {
+        match op {
+            FilterOperation::OperatorCall(call) => {
+                self._update_filter_operation_labels(&names, &mut call.left);
+                self._update_filter_operation_labels(&names, &mut call.right);
+            },
+            FilterOperation::IntLiteral(_) => {},
+            FilterOperation::CountVisits(count) => {
+                *count = self._fix_label(&names, &count);
+            },
+            FilterOperation::CountItems(_) => {},
         }
-        panic!()
+    }
+
+    fn _fix_label(&self, names: &Vec<String>, old: &String) -> String {
+        let mut prefix = self.label.clone() + ".1";
+        while prefix.len() > 0 {            
+            prefix = parent(&prefix);
+            let mut alt = prefix.clone() + "." + old;
+            alt = alt.strip_prefix(".").unwrap_or(&alt).to_string();
+            if names.contains(&alt){
+                return alt;
+            }    
+        }
+
+        ConsoleService::error(&format!("Bad link '{}' in '{}'", old, self.label));
+        return old.clone();
     }
 }
 
 #[derive(Debug)]
 pub struct Zone {
-    scenes: Vec<Scene>
+    scenes: Vec<Scene>,
+    lookup: HashMap<String, usize>,
 }
 
 impl Zone {
-    pub fn find_scene(&self, name: &String) -> &Scene {
-        for sec in &self.scenes {
-            if &sec.label == name {
-                return sec;
-            }
+    fn new(scenes: Vec<Scene>) -> Self {
+        let lookup = scenes.iter().enumerate().map(|(i, s)| (s.label.clone(), i)).collect();
+        Self {
+            scenes,
+            lookup,
         }
+    }
+
+    fn scene_names(&self) -> Vec<String> {
+        self.scenes.iter()
+            .map(|s| s.label.clone())
+            .collect()
+    }
+
+    fn correct(&mut self) {
+        let names = self.scene_names();
+        for sec in &mut self.scenes {
+            sec._update_labels(&names);
+        }
+    }
+
+    pub fn find_scene(&self, name: &String) -> &Scene {
+        if let Some(&index) = self.lookup.get(name) {
+            return &self.scenes[index];
+        }
+        ConsoleService::error(&format!("Bad scene name: {}", name));
         panic!{}
     }
 
-    pub fn link_to(&self, at: &Vec<String>, link: String) -> Vec<String> {
-        todo!{}
-    }
+    // pub fn link_to(&self, at: &Vec<String>, link: String) -> Vec<String> {
+    //     todo!{}
+    // }
 
     pub fn next(&self, last: &String) -> String {
-        let mut previous = String::from("");
-        for sec in &self.scenes {
-            if previous == *last {
-                return sec.label.clone();
-            }
-            previous = sec.label.clone();
+        let here = self.find_scene(last);
+        let up = parent(&here.label);
+        if here.branch {
+            return up;
         }
+        let start = self.lookup.get(last).unwrap_or(&0) + 1;
+        for scene in self.scenes[start..].iter() {
+            if parent(&scene.label) == up {
+                return scene.label.clone();
+            }
+        }
+        ConsoleService::error(&format!("Bad scene name: {}", last));
         panic!()
     }
 
-    pub fn next_in(&self, path: &Vec<String>, last: &String) -> String {
-        todo!{}
-    }
+    // pub fn next_in(&self, path: &Vec<String>, last: &String) -> String {
+    //     todo!{}
+    // }
 }
 
 
@@ -140,10 +244,16 @@ pub fn build_world(data: String) -> Option<Rc<Zone>> {
     ConsoleService::info(&data);
     
     match parse_zone(&data) {
-        Ok((extra, zone)) => {
+        Ok((extra, mut zone)) => {
             if extra.len() > 0 {
                 ConsoleService::error(&format!("Remaining {}", extra));
             }
+
+            for name in zone.scene_names(){
+                ConsoleService::info(&format!("{:}", name));                
+            }
+
+            zone.correct();            
             ConsoleService::info(&format!("{:#?}", zone));
             Some(Rc::new(zone))
         },
@@ -163,7 +273,7 @@ type Result<'a, T> = IResult<&'a str, T, VerboseError<&'a str>>;
 
 enum  Entry {
     Line(Line),
-    Scene(Scene)
+    Scene(Vec<Scene>)
 }
 
 // zone = ${ SOI ~ empty_line* ~ scene* ~ whitespace? ~ EOI }
@@ -171,9 +281,7 @@ fn parse_zone(input: &str) -> Result<Zone> {
     let (input, _) = many0(line_end)(input)?;
     let (input, (values, _)) = many_till(parse_scene, eof)(input)?;
 
-    Ok((input, Zone{
-        scenes: values
-    }))
+    Ok((input, Zone::new(values.concat())))
 }
 
 // scene = ${ dialog | branch }
@@ -181,7 +289,7 @@ fn parse_zone(input: &str) -> Result<Zone> {
 //     label ~ "??" ~ line_end+ 
 //     ~ (dialog_multiple_lines | dialog_single_line)
 // }
-fn parse_scene(input: &str) -> Result<Scene> {
+fn parse_scene(input: &str) -> Result<Vec<Scene>> {
     let (input, (label, _, query, _, entries)) = tuple((
         label, skip_ws, opt(tag("??")), many1(line_end), dialog_multiple_lines
     ))(input)?;
@@ -191,24 +299,23 @@ fn parse_scene(input: &str) -> Result<Scene> {
     for entry in entries {
         match entry {
             Entry::Line(line) => lines.push(line),
-            Entry::Scene(scene) => sections.push(scene)
+            Entry::Scene(scenes) => {
+                for mut scene in scenes {
+                    scene.label = label.clone() + "." + &scene.label;
+                    sections.push(scene)
+                }
+            }
         }
     }
 
-    // let renames = HashMap::<String, String>::new();
-    // for sec in &sections {
-    //     renames.insert(sec.label, label + &sec.label);
-    // }
-    // for sec in &mut sections {
-    //     sec.rename(renames);
-    // }
-
-    Ok((input, Scene {
+    let mut out = vec![Scene {
         label,
         branch: query.is_some(),
         lines,
-        sections,
-    }))
+    }];
+    out.append(&mut sections);
+
+    Ok((input, out))
 }
 
 // label = ${ symbol ~ ":" }

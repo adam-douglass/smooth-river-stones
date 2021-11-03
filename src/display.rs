@@ -1,6 +1,4 @@
 use std::collections::HashMap;
-use std::iter::Scan;
-use std::ops::Add;
 use std::{collections::VecDeque, rc::Rc};
 
 use web_sys::MouseEvent;
@@ -12,17 +10,17 @@ use crate::raw::Raw;
 
 pub struct State {
     log: VecDeque<String>,
-    scene: Vec<String>,
+    scene: String,
     line: usize,
     inventory: HashMap<String, i32>,
-    visits: HashMap<Vec<String>, u32>,
+    visits: HashMap<String, u32>,
 }
 
 impl State {
     pub fn new() -> Self {
         Self {
             log: Default::default(),
-            scene: vec![String::from("default")],
+            scene: String::from("default"),
             line: 0,
             inventory: Default::default(),
             visits: Default::default(),
@@ -76,15 +74,7 @@ impl Display {
     }
 
     fn current_scene(&self) -> &Scene {
-        let root = self.zone.find_scene(&self.state.scene[0]);
-        self.part_from(&self.state.scene[1..], root)
-    }
-
-    fn part_from<'a>(&'a self, path: &[String], from: &'a Scene) -> &'a Scene {
-        if path.len() == 0 {
-            return from;
-        }
-        return self.part_from(&path[1..], from.find_section(&path[0]));
+        self.zone.find_scene(&self.state.scene)
     }
 
     fn render_active(&self, line: &Line) -> String {
@@ -185,12 +175,7 @@ impl Display {
 
     fn advance_scene(&mut self){
         self.state.line = 0;
-        let old_name = self.state.scene.pop().unwrap_or(String::from("default"));
-        if self.state.scene.len() == 0 {
-            self.state.scene.push(self.zone.next(&old_name));
-        } else {
-            self.state.scene.push(self.zone.next_in(&self.state.scene, &old_name));
-        }
+        self.state.scene = self.zone.next(&self.state.scene);        
         self.state.visits.insert(self.state.scene.clone(), 1 + self.count_visits(&self.state.scene));
         self.advance_line(false);
     }
@@ -213,7 +198,7 @@ impl Display {
         }
     }
 
-    fn count_visits(&self, name: &Vec<String>) -> u32 {
+    fn count_visits(&self, name: &String) -> u32 {
         match self.state.visits.get(name) {
             Some(value) => *value,
             None => 0,
