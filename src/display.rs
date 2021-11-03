@@ -1,15 +1,16 @@
 use std::collections::HashMap;
+use std::ops::Deref;
 use std::{collections::VecDeque, rc::Rc};
 
 use web_sys::MouseEvent;
 use yew::services::ConsoleService;
 use yew::{Component, ComponentLink, Html, Properties, html};
 
-use crate::zone::{Command, Line, LineFilter, Scene, TextLine, TextPart, Zone};
+use crate::zone::{Command, FilterOperation, Line, LineFilter, Scene, TextLine, TextLink, TextPart, Zone};
 use crate::raw::Raw;
 
 pub struct State {
-    log: VecDeque<String>,
+    log: VecDeque<Html>,
     scene: String,
     line: usize,
     inventory: HashMap<String, i32>,
@@ -30,7 +31,7 @@ impl State {
 
 
 pub enum Message {
-    LinkClick,
+    LinkClick(TextLink),
     NextLine(MouseEvent),
 }
 
@@ -50,8 +51,8 @@ type DoAdvanceLine = bool;
 impl Display {
     fn build_logs(&self) -> Html {
         let mut rows = Vec::new();
-        for (index, log) in self.state.log.iter().enumerate() {
-            rows.push(html!{<Raw key={index} inner_html={log.clone()}/>});
+        for (_index, log) in self.state.log.iter().enumerate() {
+            rows.push(log.clone());
         }
         html!{
             <div class="logarea">
@@ -63,10 +64,20 @@ impl Display {
     fn build_control(&self) -> Html {
         let scene = self.current_scene();
         if scene.branch {
-            html!{<div>{format!("{:?}", scene)}</div>}
+            let mut lines = Vec::new();
+            for ll in &scene.lines {
+                if let Some(view) = self.render_active(ll) {
+                    lines.push(html!{<div class="content ">{view}</div>})
+                }
+            }
+            html!{<>{lines}</>}
         } else {
             let line = &scene.lines[self.state.line as usize];
-            html!{<div class="block"><Raw inner_html={self.render_active(line)} /></div>}
+            if let Some(view) = self.render_active(line) {
+                html!{<div class="content">{view}</div>}
+            } else {
+                html!{<div class="content"></div>}
+            }
         }
     }
     fn build_inventory(&self) -> Html {
@@ -77,32 +88,63 @@ impl Display {
         self.zone.find_scene(&self.state.scene)
     }
 
-    fn render_active(&self, line: &Line) -> String {
+    fn render_active(&self, line: &Line) -> Option<Html> {
         match line {
             Line::TextLine(line) => self.render_text_line(line),
             Line::CommandLine(_) => todo!("command line"),
         }
     }
 
-    fn render_text_line(&self, line: &TextLine) -> String {
+    fn render_text_line(&self, line: &TextLine) -> Option<Html> {
         if let Some(filter) = &line.filter {
             if !self.check_filter(filter) {
-                return String::from("");
+                return None;
             }
         }
 
-        let mut out = String::from("");
+        let mut out = Vec::new();
         for part in &line.parts {
-            match part {
-                TextPart::Link(_) => todo!(),
-                TextPart::Text(text) => out += text,
-            }
+            out.push(match part {
+                TextPart::Link(link) => {
+                    let click = self.link.callback({
+                        let dest = Rc::new(link.clone());
+                        move |_| Message::LinkClick(dest.deref().clone())
+                    });
+                    html!{
+                    <span class="inline-button" name={link.destination.clone()} onclick={click}>
+                        <Raw inner_html={link.text.clone()}/>
+                    </span>
+                }},
+                TextPart::Text(text) => html!{<Raw inner_html={text.clone()} />},
+            });
         }
-        return out;
+        return Some(html!{<>{out}</>});
     }
 
     fn check_filter(&self, filter: &LineFilter) -> bool {
-        todo!()
+        self.eval_filter(&filter.operation) != 0
+    }
+
+    fn eval_filter(&self, op: &FilterOperation) -> i32 {
+        match op {
+            FilterOperation::OperatorCall(call) => {
+                match call.operator {
+                    crate::zone::Ops::Add => self.eval_filter(&call.left) + self.eval_filter(&call.right),
+                    crate::zone::Ops::Sub => self.eval_filter(&call.left) - self.eval_filter(&call.right),
+                    crate::zone::Ops::Mul => self.eval_filter(&call.left) * self.eval_filter(&call.right),
+                    crate::zone::Ops::Div => self.eval_filter(&call.left) / self.eval_filter(&call.right),
+                    crate::zone::Ops::Gt => (self.eval_filter(&call.left) > self.eval_filter(&call.right)) as i32,
+                    crate::zone::Ops::Gte => (self.eval_filter(&call.left) >= self.eval_filter(&call.right)) as i32,
+                    crate::zone::Ops::Lt => (self.eval_filter(&call.left) < self.eval_filter(&call.right)) as i32,
+                    crate::zone::Ops::Lte => (self.eval_filter(&call.left) <= self.eval_filter(&call.right)) as i32,
+                    crate::zone::Ops::Eq => (self.eval_filter(&call.left) == self.eval_filter(&call.right)) as i32,
+                    crate::zone::Ops::Ne => (self.eval_filter(&call.left) != self.eval_filter(&call.right)) as i32,
+                }
+            },
+            FilterOperation::IntLiteral(lit) => *lit,
+            FilterOperation::CountVisits(visit) => *self.state.visits.get(visit).unwrap_or(&0) as i32,
+            FilterOperation::CountItems(item) => *self.state.inventory.get(item).unwrap_or(&0),
+        }
     }
 
     fn next_button(&self) -> Html {
@@ -130,15 +172,28 @@ impl Display {
         }
     }
 
+    fn publish_link(&mut self, text: &String) {
+        self.state.log.push_back(html!{
+            <div class="content">
+                <span class="inline-disabled-button">
+                    <Raw inner_html={text.clone()}/>
+                </span>
+            </div>
+        })
+    }
+
     fn publish_current(&mut self){
-        self.state.log.push_back({
+        let line = {
             let scene = self.current_scene();
             if scene.branch {
                 return
             } 
             let line = &scene.lines[self.state.line];
             self.render_active(line)
-        });
+        };
+        if let Some(view) = line {
+            self.state.log.push_back(view);
+        }
     }
 
     fn advance_line(&mut self, inc: bool) {
@@ -171,6 +226,13 @@ impl Display {
                 }
             },
         }
+    }
+
+    fn follow_link(&mut self, link: &String) {
+        self.state.line = 0;
+        self.state.scene = link.clone();
+        self.state.visits.insert(self.state.scene.clone(), 1 + self.count_visits(&self.state.scene));
+        self.advance_line(false);
     }
 
     fn advance_scene(&mut self){
@@ -220,7 +282,12 @@ impl Component for Display {
 
     fn update(&mut self, msg: Self::Message) -> yew::ShouldRender {
         match msg {
-            Message::LinkClick => todo!(),
+            Message::LinkClick(target) => {
+                ConsoleService::info(&format!("Click link: {}", target.destination));
+                self.publish_link(&target.text);
+                self.follow_link(&target.destination);
+                true
+            },
             Message::NextLine(_) => {
                 ConsoleService::info("Next line");
                 self.publish_current();

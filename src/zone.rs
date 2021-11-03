@@ -33,7 +33,7 @@ pub enum Command {
 }
 
 #[derive(Debug, Clone)]
-enum Ops {
+pub enum Ops {
     Add,
     Sub,
     Mul,
@@ -47,14 +47,14 @@ enum Ops {
 }
 
 #[derive(Debug, Clone)]
-struct OperatorCall {
-    operator: Ops,
-    left: FilterOperation,
-    right: FilterOperation,
+pub struct OperatorCall {
+    pub operator: Ops,
+    pub left: FilterOperation,
+    pub right: FilterOperation,
 }
 
 #[derive(Debug, Clone)]
-enum FilterOperation {
+pub enum FilterOperation {
     OperatorCall(Box<OperatorCall>),
     IntLiteral(i32),
     CountVisits(String),
@@ -63,13 +63,13 @@ enum FilterOperation {
 
 #[derive(Debug, Clone)]
 pub struct LineFilter {
-    operation: FilterOperation
+    pub operation: FilterOperation
 }
 
 #[derive(Debug, Clone)]
 pub struct TextLink {
-    destination: String,
-    text: String
+    pub destination: String,
+    pub text: String
 }
 
 #[derive(Debug, Clone)]
@@ -220,7 +220,7 @@ impl Zone {
     pub fn next(&self, last: &String) -> String {
         let here = self.find_scene(last);
         let up = parent(&here.label);
-        if here.branch {
+        if up != "" && self.find_scene(&up).branch {
             return up;
         }
         let start = self.lookup.get(last).unwrap_or(&0) + 1;

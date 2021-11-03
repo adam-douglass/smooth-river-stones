@@ -14,8 +14,8 @@ pub enum Message {
 }
 
 pub struct Root {
-    link: ComponentLink<Self>,
-    zone_fetch: Option<FetchTask>,
+    _link: ComponentLink<Self>,
+    _zone_fetch: Option<FetchTask>,
     load_error: Option<anyhow::Error>,
     zone: Option<Rc<Zone>>,
 }
@@ -50,8 +50,8 @@ impl Component for Root {
         let task = FetchService::fetch(request, callback).expect("failed to start request");                // 4. store the task so it isn't canceled immediately                self.fetch_task = Some(task);
 
         Self {
-            link,
-            zone_fetch: Some(task),
+            _link: link,
+            _zone_fetch: Some(task),
             zone: None,
             load_error: None,
         }

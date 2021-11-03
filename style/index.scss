@@ -37,3 +37,13 @@ body {
         opacity: 1;
     }
 }
+
+.inline-button {
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.inline-disabled-button {
+    text-decoration: underline dotted;
+    
+}

@@ -32,16 +32,16 @@ impl Component for Raw {
     }
 
     fn view(&self) -> Html {
-        let div = web_sys::window()
+        let span = web_sys::window()
             .unwrap()
             .document()
             .unwrap()
-            .create_element("div")
+            .create_element("span")
             .unwrap();
-        div.set_class_name("content");
-        div.set_inner_html(&self.props.inner_html[..]);
+        span.set_class_name("content");
+        span.set_inner_html(&self.props.inner_html[..]);
 
-        let node = Node::from(div);
+        let node = Node::from(span);
         let vnode = VNode::VRef(node);
         vnode
     }
