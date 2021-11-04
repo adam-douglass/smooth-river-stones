@@ -43,6 +43,10 @@ body {
 }
 
 .footer-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-around;
     height: 40%;
 }
 
@@ -100,5 +104,14 @@ body {
 
 	100% {
         opacity: 1;
+    }
+}
+
+.final-icon {
+    width: 100px;
+    height: 100px;
+
+    ion-icon {
+        font-size: 100px;
     }
 }

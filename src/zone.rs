@@ -29,7 +29,10 @@ pub struct ItemCommand {
 
 #[derive(Debug, Clone)]
 pub enum Command {
-    Item(ItemCommand)
+    Item(ItemCommand),
+    Next(String),
+    End,
+    Reset
 }
 
 #[derive(Debug, Clone)]
@@ -117,6 +120,11 @@ impl Scene {
                 Line::CommandLine(command) => {
                     match command {
                         Command::Item(_) => {},
+                        Command::Reset => {},
+                        Command::End => {},
+                        Command::Next(value) => {
+                            *value = self._fix_label(&names, value);
+                        }
                     }
                 },
             }
@@ -371,14 +379,13 @@ fn symbol(input: &str) -> Result<String> {
 
 // command = ${ "*" ~ whitespace* ~ (item_command) }
 fn command(input: &str) -> Result<Entry> {
-    let (input, (_, _, command)) = tuple((tag("*"), many0(tag(" ")), item_command))(input)?;
-    let cmd = Command::Item(command);
-    let line = Line::CommandLine(cmd);
+    let (input, (_, _, command)) = tuple((tag("*"), many0(tag(" ")), alt((item_command, next_command, end_command, reset_command))))(input)?;
+    let line = Line::CommandLine(command);
     Ok((input, Entry::Line(line)))
 }
 
 // item_command = ${"item" ~ (whitespace? ~ ("+" | "-") ~ whitespace? ~ symbol)+ }
-fn item_command(input: &str) -> Result<ItemCommand> {
+fn item_command(input: &str) -> Result<Command> {
     let (input, (_, parts)) = pair(tag("item"), many0(item_change))(input)?;
     let mut change = HashMap::new();
     for (name, value) in parts {
@@ -391,8 +398,24 @@ fn item_command(input: &str) -> Result<ItemCommand> {
             },
         }
     }
-    Ok((input, ItemCommand{change}))
+    Ok((input, Command::Item(ItemCommand{change})))
 }
+
+fn end_command(input: &str) -> Result<Command> {
+    let (input, _) = tag("end")(input)?;
+    Ok((input, Command::End))
+}
+
+fn reset_command(input: &str) -> Result<Command> {
+    let (input, _) = tag("reset")(input)?;
+    Ok((input, Command::Reset))
+}
+
+fn next_command(input: &str) -> Result<Command> {
+    let (input, (_, _, label)) = tuple((tag("next"), skip_ws, symbol))(input)?;
+    Ok((input, Command::Next(label)))
+}
+
 
 fn item_change(input: &str) -> Result<(String, i32)> {
     let (input, (_, change, _, name)) = tuple((many0(tag(" ")), alt((tag("+"), tag("-"))), many0(tag(" ")), symbol))(input)?;
@@ -421,7 +444,7 @@ fn text_fragment(input: &str) -> Result<TextPart> {
 }
 
 fn raw_text_fragment(input: &str) -> Result<String> {
-    let (input, body) = many1(alt((alphanumeric1, is_a(",'\"</>() ."))))(input)?;    
+    let (input, body) = many1(alt((alphanumeric1, is_a(",'\"!?</>() ."))))(input)?;    
     Ok((input, body.concat().to_string()))
 }
 

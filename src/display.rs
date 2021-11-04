@@ -9,12 +9,20 @@ use yew::{Component, ComponentLink, Html, Properties, html};
 use crate::zone::{Command, FilterOperation, Line, LineFilter, Scene, TextLine, TextLink, TextPart, Zone};
 use crate::raw::Raw;
 
+#[derive(PartialEq)]
+enum Status {
+    Running,
+    Finished,
+    Reset
+}
+
 pub struct State {
     log: VecDeque<Html>,
     scene: String,
     line: usize,
     inventory: HashMap<String, i32>,
     visits: HashMap<String, u32>,
+    status: Status,
 }
 
 impl State {
@@ -25,6 +33,7 @@ impl State {
             line: 0,
             inventory: Default::default(),
             visits: Default::default(),
+            status: Status::Running,
         }
     }
 }
@@ -33,6 +42,7 @@ impl State {
 pub enum Message {
     LinkClick(TextLink),
     NextLine(MouseEvent),
+    Reset(MouseEvent),
 }
 
 #[derive(Properties, Clone)]
@@ -97,7 +107,7 @@ impl Display {
     fn render_active(&self, line: &Line) -> Option<Html> {
         match line {
             Line::TextLine(line) => self.render_text_line(line),
-            Line::CommandLine(_) => todo!("command line"),
+            Line::CommandLine(_) => None,
         }
     }
 
@@ -153,30 +163,30 @@ impl Display {
         }
     }
 
-    fn next_button(&self, children: Html) -> Html {
-        let scene = self.current_scene();
-        if scene.branch {
-            html! {
-                <div class="next-area">
-                    <button class="button" disabled={true} style="cursor: auto">
-                        <span class="icon">
-                            <ion-icon size="large" name="help-circle"></ion-icon>
-                        </span>
-                    </button>
-                </div>
-            }
-        } else {
-            html! {
-                <div class="next-area">
-                    <button class="button" onclick={self.link.callback(Message::NextLine)}>
-                        <span class="icon pulsing">
-                            <ion-icon size="large" name="caret-forward"></ion-icon>
-                        </span>
-                    </button>
-                </div>
-            }
-        }
-    }
+    // fn next_button(&self, children: Html) -> Html {
+    //     let scene = self.current_scene();
+    //     if scene.branch {
+    //         html! {
+    //             <div class="next-area">
+    //                 <button class="button" disabled={true} style="cursor: auto">
+    //                     <span class="icon">
+    //                         <ion-icon size="large" name="help-circle"></ion-icon>
+    //                     </span>
+    //                 </button>
+    //             </div>
+    //         }
+    //     } else {
+    //         html! {
+    //             <div class="next-area">
+    //                 <button class="button" onclick={self.link.callback(Message::NextLine)}>
+    //                     <span class="icon pulsing">
+    //                         <ion-icon size="large" name="caret-forward"></ion-icon>
+    //                     </span>
+    //                 </button>
+    //             </div>
+    //         }
+    //     }
+    // }
 
     fn publish_link(&mut self, text: &String) {
         self.state.log.push_back(html!{
@@ -256,6 +266,18 @@ impl Display {
                 }
                 true
             },
+            Command::Next(link) => {
+                self.follow_link(link);
+                false
+            },
+            Command::End => {
+                self.state.status = Status::Finished;
+                false
+            },
+            Command::Reset => {
+                self.state.status = Status::Reset;
+                false
+            },
         }
     }
 
@@ -270,6 +292,22 @@ impl Display {
         match self.state.visits.get(name) {
             Some(value) => *value,
             None => 0,
+        }
+    }
+
+    fn state_icon(&self) -> Html {
+        match self.state.status {
+            Status::Running => html!{},
+            Status::Finished => html!{
+                <span class="final-icon">
+                    <ion-icon name="help-circle"></ion-icon>
+                </span>
+            },
+            Status::Reset => html!{
+                <span class="final-icon clickable-region" onclick={self.link.callback(Message::Reset)}>
+                    <ion-icon name="refresh-circle"></ion-icon>
+                </span>
+            },
         }
     }
 }
@@ -289,17 +327,30 @@ impl Component for Display {
     fn update(&mut self, msg: Self::Message) -> yew::ShouldRender {
         match msg {
             Message::LinkClick(target) => {
-                ConsoleService::info(&format!("Click link: {}", target.destination));
-                self.publish_link(&target.text);
-                self.follow_link(&target.destination);
-                true
+                if self.state.status == Status::Running {
+                    ConsoleService::info(&format!("Click link: {}", target.destination));
+                    self.publish_link(&target.text);
+                    self.follow_link(&target.destination);
+                    true
+                } else {
+                    false
+                }
             },
             Message::NextLine(_) => {
-                ConsoleService::info("Next line");
-                self.publish_current();
-                self.advance_line(true);
-                true
+                if self.state.status == Status::Running {
+                    ConsoleService::info("Next line");
+                    self.publish_current();
+                    self.advance_line(true);
+                    true
+                } else {
+                    false
+                }
             },
+            Message::Reset(_) => {
+                ConsoleService::info("Reset");
+                self.state = State::new();
+                true
+            }
         }
     }
 
@@ -310,7 +361,7 @@ impl Component for Display {
     fn view(&self) -> yew::Html {
 
         let scene = self.current_scene();
-        let (background_click, background_class) = if !scene.branch {
+        let (background_click, background_class) = if !scene.branch && self.state.status == Status::Running {
             (Some(self.link.callback(Message::NextLine)), "main-column clickable-region")
         } else {
             (None, "main-column")
@@ -323,6 +374,7 @@ impl Component for Display {
                     {self.build_logs()}
                 </div>
                 <footer class="footer-row">
+                    {self.state_icon()}
                     {self.build_inventory()}
                 </footer>
             </div>

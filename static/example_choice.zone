@@ -1,0 +1,19 @@
+
+default:
+    After a long walk, you come to a fork in the road.
+
+fork: ??
+    Which way should you go?
+    [left | I want to walk left.]
+    [right | Right is the way for me.]
+
+right:
+    Walking down the right path you see a puppy!
+    *next end
+
+left: 
+    You wander down the left path and enjoy feeding some ducks.
+    
+end:
+    You had a very nice walk.
+    *reset
