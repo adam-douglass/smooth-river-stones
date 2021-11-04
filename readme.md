@@ -9,12 +9,12 @@ A micro game engine for choose your own adventure stories.
 
 ## Expected features
 
-- click anywhere to advance
-    - space
+- space to advance
 - autosave/load place 
 - scroll back 
 - hidden variables
 - item details
+- add ending/reset
 
 ## Bugs
 

@@ -2,18 +2,48 @@ body {
     height: 100vh;
     padding: 0;
     margin: 0;
+    font-family: 'Zen Old Mincho', serif;
 }
 
-.fullheight {
-    height: 100vh;
+
+.main-column {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    justify-content: end;
+}
+
+.main-row {
+    display:flex;
+    flex-direction: row;
+    justify-content: left;
+    height: 60%;
+    align-items: flex-end;
+    overflow: auto;
+}
+
+@media only screen and (min-width: 500px) {
+    .left-gutter {
+        width: 4em;
+    }    
+}
+
+.padding {
+    flex-grow: 1;
 }
 
 .logarea {
     height: 100%;
     display: flex;
     flex-direction: column;
+    max-width: 80em;
+    // justify-content: stretch;
     justify-content: end;
-    overflow-y: auto;
+    min-height: min-content;
+}
+
+.footer-row {
+    height: 40%;
 }
 
 .next-area {
@@ -49,14 +79,18 @@ body {
     
 }
 
-.main-column {
-    display: flex;
-    flex-direction: column;
-}
-
 .added-text {
     animation: arrive 0.2s;
     animation-timing-function: ease-in;
+}
+
+.clickable-region {
+    cursor: pointer;
+}
+
+.dialog-line {
+    margin-bottom: 1em;
+    min-height: fit-content;
 }
 
 @keyframes arrive {

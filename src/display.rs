@@ -50,12 +50,13 @@ type DoAdvanceLine = bool;
 
 impl Display {
     fn build_logs(&self) -> Html {
-        let mut rows = Vec::new();
+        let mut rows = Vec::new();        
         for (_index, log) in self.state.log.iter().enumerate() {
             rows.push(log.clone());
         }
         html!{
             <div class="logarea">
+                <div class="padding"></div>
                 {rows}
                 {self.build_control()}
             </div>
@@ -67,16 +68,16 @@ impl Display {
             let mut lines = Vec::new();
             for ll in &scene.lines {
                 if let Some(view) = self.render_active(ll) {
-                    lines.push(html!{<div class="content added-text">{view}</div>})
+                    lines.push(html!{<div class="dialog-line added-text">{view}</div>})
                 }
             }
             html!{<>{lines}</>}
         } else {
             let line = &scene.lines[self.state.line as usize];
             if let Some(view) = self.render_active(line) {
-                html!{<div class="content added-text">{view}</div>}
+                html!{<div class="dialog-line added-text">{view}</div>}
             } else {
-                html!{<div class="content added-text"></div>}
+                html!{<div class="dialog-line added-text"></div>}
             }
         }
     }
@@ -152,7 +153,7 @@ impl Display {
         }
     }
 
-    fn next_button(&self) -> Html {
+    fn next_button(&self, children: Html) -> Html {
         let scene = self.current_scene();
         if scene.branch {
             html! {
@@ -179,7 +180,7 @@ impl Display {
 
     fn publish_link(&mut self, text: &String) {
         self.state.log.push_back(html!{
-            <div class="content">
+            <div class="dialog-line">
                 <span class="inline-disabled-button">
                     <Raw inner_html={text.clone()}/>
                 </span>
@@ -197,7 +198,7 @@ impl Display {
             self.render_active(line)
         };
         if let Some(view) = line {
-            self.state.log.push_back(view);
+            self.state.log.push_back(html!{<div class="dialog-line">{view}</div>});
         }
     }
 
@@ -307,16 +308,23 @@ impl Component for Display {
     }
 
     fn view(&self) -> yew::Html {
+
+        let scene = self.current_scene();
+        let (background_click, background_class) = if !scene.branch {
+            (Some(self.link.callback(Message::NextLine)), "main-column clickable-region")
+        } else {
+            (None, "main-column")
+        };
+
         html!{
-            <div class="columns fullheight">
-                <div class="column is-1"></div>
-                <div class="column fullheight main-column">
-                    <div style="height:60%">{self.build_logs()}</div>
-                    <div class="row">
-                        {self.next_button()}
-                        {self.build_inventory()}
-                    </div>
+            <div class={background_class} onclick={background_click}>
+                <div class="main-row">
+                    <div class="left-gutter"></div>
+                    {self.build_logs()}
                 </div>
+                <footer class="footer-row">
+                    {self.build_inventory()}
+                </footer>
             </div>
         }
     }
