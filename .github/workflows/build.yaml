@@ -6,7 +6,7 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    container: ghcr.io/${{ github.repository_owner }}/crew-environment:temp
+    container: ghcr.io/${{ github.repository_owner }}/srs-environment:temp
     steps:
       - name: Checkout 🛎️
         uses: actions/checkout@v2.3.1
