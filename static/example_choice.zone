@@ -9,11 +9,15 @@ fork: ??
 
 right:
     Walking down the right path you see a puppy!
+    *set saw_dog
     *next end
 
 left: 
     You wander down the left path and enjoy feeding some ducks.
-    
+    *set fed_duck
+
 end:
     You had a very nice walk.
+    (saw_dog) You saw a puppy after all!
+    (fed_duck) You gave those ducks peas!
     *reset

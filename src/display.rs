@@ -28,6 +28,7 @@ pub struct State {
     line: usize,
     inventory: HashMap<String, i32>,
     visits: HashMap<String, u32>,
+    values: HashMap<String, i32>,
     status: Status,
 }
 
@@ -39,6 +40,7 @@ impl State {
             line: 0,
             inventory: Default::default(),
             visits: Default::default(),
+            values: Default::default(),
             status: Status::Running,
         }
     }
@@ -169,6 +171,7 @@ impl Display {
             FilterOperation::IntLiteral(lit) => *lit,
             FilterOperation::CountVisits(visit) => *self.state.visits.get(visit).unwrap_or(&0) as i32,
             FilterOperation::CountItems(item) => *self.state.inventory.get(item).unwrap_or(&0),
+            FilterOperation::ReadVariable(name) => *self.state.values.get(name).unwrap_or(&0)
         }
     }
 
@@ -300,6 +303,10 @@ impl Display {
             Command::Reset => {
                 self.state.status = Status::Reset;
                 false
+            },
+            Command::Set(cmd) => {
+                self.state.values.insert(cmd.name.clone(), cmd.value);
+                true
             },
         }
     }

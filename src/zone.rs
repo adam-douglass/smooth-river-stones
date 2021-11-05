@@ -28,11 +28,18 @@ pub struct ItemCommand {
 }
 
 #[derive(Debug, Clone)]
+pub struct SetCommand {
+    pub name: String,
+    pub value: i32
+}
+
+#[derive(Debug, Clone)]
 pub enum Command {
     Item(ItemCommand),
     Next(String),
     End,
-    Reset
+    Reset,
+    Set(SetCommand),
 }
 
 #[derive(Debug, Clone)]
@@ -62,6 +69,7 @@ pub enum FilterOperation {
     IntLiteral(i32),
     CountVisits(String),
     CountItems(String),
+    ReadVariable(String),
 }
 
 #[derive(Debug, Clone)]
@@ -125,6 +133,7 @@ impl Scene {
                         Command::Next(value) => {
                             *value = self._fix_label(&names, value);
                         }
+                        Command::Set(_) => {},
                     }
                 },
             }
@@ -166,6 +175,7 @@ impl Scene {
                 *count = self._fix_label(&names, &count);
             },
             FilterOperation::CountItems(_) => {},
+            FilterOperation::ReadVariable(_) => {},
         }
     }
 
@@ -377,9 +387,15 @@ fn symbol(input: &str) -> Result<String> {
     Ok((input, first.to_string() + &parts.concat().to_string()))
 }
 
+fn var_symbol(input: &str) -> Result<String> {
+    let (input, (first, parts)) = pair(alphanumeric1, many0(alt((alphanumeric1, is_a("_")))))(input)?;
+    Ok((input, first.to_string() + &parts.concat().to_string()))
+}
+
+
 // command = ${ "*" ~ whitespace* ~ (item_command) }
 fn command(input: &str) -> Result<Entry> {
-    let (input, (_, _, command)) = tuple((tag("*"), many0(tag(" ")), alt((item_command, next_command, end_command, reset_command))))(input)?;
+    let (input, (_, _, command)) = tuple((tag("*"), many0(tag(" ")), alt((item_command, next_command, end_command, reset_command, set_command))))(input)?;
     let line = Line::CommandLine(command);
     Ok((input, Entry::Line(line)))
 }
@@ -416,6 +432,27 @@ fn next_command(input: &str) -> Result<Command> {
     Ok((input, Command::Next(label)))
 }
 
+fn set_command(input: &str) -> Result<Command> {
+    let (input, (_, _, name, value)) = tuple((tag("set"), skip_ws, var_symbol, opt(pair(assign_operator, int_literal))))(input)?;
+    let value: i32 = match value {
+        Some((_, value)) => if let FilterOperation::IntLiteral(literal) = value {
+            literal
+        } else {
+            1
+        },
+        None => 1,
+    };
+    Ok((input, Command::Set(SetCommand{ name, value  })))
+}
+
+fn assign_operator(input: &str) -> Result<()> {
+    let (input, (_, content, _)) = tuple((skip_ws, alt((tag("="), tag("="))), skip_ws))(input)?;
+    if content == "=" {
+        Ok((input, ()))
+    } else {
+        Ok((input, ()))
+    }
+}
 
 fn item_change(input: &str) -> Result<(String, i32)> {
     let (input, (_, change, _, name)) = tuple((many0(tag(" ")), alt((tag("+"), tag("-"))), many0(tag(" ")), symbol))(input)?;
@@ -577,7 +614,7 @@ fn prod_operator(input: &str) -> Result<Ops> {
 
 // expr_atom = _{ ("(" ~ filter_expr ~ ")") | count_visits | int_literal }
 fn expr_atom(input: &str) -> Result<FilterOperation> {
-    alt((sub_expr, count_visits, count_items, int_literal))(input)
+    alt((sub_expr, count_visits, count_items, read_variable, int_literal))(input)
 }
 
 fn sub_expr(input: &str) -> Result<FilterOperation> {
@@ -593,6 +630,11 @@ fn count_items(input: &str) -> Result<FilterOperation> {
 fn count_visits(input: &str) -> Result<FilterOperation> {
     let (input, (_, content)) = pair(tag("#"), symbol)(input)?;
     Ok((input, FilterOperation::CountVisits(content)))
+}
+
+fn read_variable(input: &str) -> Result<FilterOperation> {
+    let (input, content) = var_symbol(input)?;
+    Ok((input, FilterOperation::ReadVariable(content)))
 }
 
 // int_literal = { '1'..'9' ~ '0'..'9'* }
