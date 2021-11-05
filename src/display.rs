@@ -3,22 +3,27 @@ use std::ops::Deref;
 use std::{collections::VecDeque, rc::Rc};
 
 use web_sys::{KeyboardEvent, MouseEvent};
+use yew::format::Json;
 use yew::services::keyboard::KeyListenerHandle;
-use yew::services::{ConsoleService, KeyboardService};
+use yew::services::storage::Area;
+use yew::services::{ConsoleService, KeyboardService, StorageService};
 use yew::{Component, ComponentLink, Html, Properties, html};
+
+use serde::{Deserialize, Serialize};
 
 use crate::zone::{Command, FilterOperation, Line, LineFilter, Scene, TextLine, TextLink, TextPart, Zone};
 use crate::raw::Raw;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Deserialize, Serialize)]
 enum Status {
     Running,
     Finished,
     Reset
 }
 
+#[derive(Deserialize, Serialize)]
 pub struct State {
-    log: VecDeque<Html>,
+    log: VecDeque<String>,
     scene: String,
     line: usize,
     inventory: HashMap<String, i32>,
@@ -56,6 +61,7 @@ pub struct Display {
     link: ComponentLink<Self>,
     zone: Rc<Zone>,
     state: State,
+    storage: Option<StorageService>,
     _event_handle: KeyListenerHandle
 }
 
@@ -64,8 +70,8 @@ type DoAdvanceLine = bool;
 impl Display {
     fn build_logs(&self) -> Html {
         let mut rows = Vec::new();        
-        for (_index, log) in self.state.log.iter().enumerate() {
-            rows.push(log.clone());
+        for log in self.state.log.iter() {
+            rows.push(html!{<div class="dialog-line"><Raw inner_html={log.clone()} /></div>});
         }
         html!{
             <div class="logarea">
@@ -192,13 +198,27 @@ impl Display {
     // }
 
     fn publish_link(&mut self, text: &String) {
-        self.state.log.push_back(html!{
-            <div class="dialog-line">
-                <span class="inline-disabled-button">
-                    <Raw inner_html={text.clone()}/>
-                </span>
-            </div>
-        })
+        self.state.log.push_back(self.render_inactive_link(text))
+    }
+
+    fn render_inactive_link(&self, text: &String) -> String {
+        String::from("<span class=\"inline-disabled-button\">") + &text + "</span>"
+    }
+
+    fn render_inactive(&self, line: &Line) -> String {
+        match line {
+            Line::TextLine(textline) => {
+                let mut buffer = String::from("");
+                for part in textline.parts.iter() {    
+                    match part {
+                        TextPart::Link(l) => buffer += &self.render_inactive_link(&l.text),
+                        TextPart::Text(t) => buffer += t,
+                    }
+                }
+                buffer
+            },
+            Line::CommandLine(_) => String::from(""),
+        }
     }
 
     fn publish_current(&mut self){
@@ -208,10 +228,10 @@ impl Display {
                 return
             } 
             let line = &scene.lines[self.state.line];
-            self.render_active(line)
+            self.render_inactive(line)
         };
-        if let Some(view) = line {
-            self.state.log.push_back(html!{<div class="dialog-line">{view}</div>});
+        if line.len() > 0 {
+            self.state.log.push_back(line);
         }
     }
 
@@ -313,18 +333,42 @@ impl Display {
             },
         }
     }
+
+    fn save(&mut self) {
+        if let Some(ss) = &mut self.storage {
+            ss.store(STATE_KEY, Json(&self.state));
+        }
+    }
 }
+
+static STATE_KEY: &str = "session";
 
 impl Component for Display {
     type Message = Message;
     type Properties = DisplayProperties;
 
     fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let event_listener = KeyboardService::register_key_press(&web_sys::window().unwrap(), (&link).callback(|e: KeyboardEvent| Message::KeyboardEvent(e)));
+        let storage = StorageService::new(Area::Local);
+        if let Err(error) = storage {
+            ConsoleService::error("Could not load local storage.");
+            ConsoleService::error(error);
+        }
+
+        // Load the elapsed time
+        let saved_state = match &storage {
+            Ok(ss) => {
+                let Json(elapsed_raw) = ss.restore(STATE_KEY);
+                elapsed_raw.unwrap_or_else(|_| State::new())
+            },
+            Err(_) => State::new(),
+        };
+
+        let event_listener = KeyboardService::register_key_press(&web_sys::window().unwrap(), (&link).callback(|e: KeyboardEvent| Message::KeyboardEvent(e)));        
         Self {
             link,
             zone: props.zone,
-            state: State::new(),
+            state: saved_state,
+            storage: storage.ok(),
             _event_handle: event_listener
         }        
     }
@@ -336,6 +380,7 @@ impl Component for Display {
                     ConsoleService::info(&format!("Click link: {}", target.destination));
                     self.publish_link(&target.text);
                     self.follow_link(&target.destination);
+                    self.save();
                     true
                 } else {
                     false
@@ -346,6 +391,7 @@ impl Component for Display {
                     ConsoleService::info("Next line");
                     self.publish_current();
                     self.advance_line(true);
+                    self.save();
                     true
                 } else {
                     false
@@ -354,6 +400,7 @@ impl Component for Display {
             Message::Reset(_) => {
                 ConsoleService::info("Reset");
                 self.state = State::new();
+                self.save();
                 true
             },
             Message::KeyboardEvent(event) => {
