@@ -33,7 +33,7 @@ impl Component for Root {
                 "http://localhost:8080".to_string()
             },
         };
-        let url = host + "/static/example_choice.zone";
+        let url = host + "./static/index.zone";
         ConsoleService::info(&format!("Loading zone at: {}", url));
         
         let request = Request::get(url)
