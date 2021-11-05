@@ -17,7 +17,7 @@ jobs:
           export HOME=/root
           rustup toolchain list && env
           cargo fetch
-          trunk build --release 
+          trunk build --release --public-url /smooth-river-stones/
         shell: bash
 
       - name: Deploy 🚀
