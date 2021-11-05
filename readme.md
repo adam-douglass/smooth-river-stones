@@ -10,7 +10,6 @@ A micro game engine for choose your own adventure stories.
 
 ## Expected features
 
-- hidden variables
 - scroll back 
 - item details
 
