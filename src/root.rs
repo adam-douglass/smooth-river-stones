@@ -25,15 +25,15 @@ impl Component for Root {
     type Properties = ();
 
     fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
-
-        let host = match yew::utils::origin() {
+        let doc = yew::utils::document();
+        let host = match doc.url() {
             Ok(h) => h,
             Err(err) => {
-                ConsoleService::error(&format!("Issue finding own host: {}", err));
+                ConsoleService::error(&format!("Issue finding own host: {:?}", err));
                 "http://localhost:8080".to_string()
             },
         };
-        let url = host + "./static/index.zone";
+        let url = host + "/static/index.zone";
         ConsoleService::info(&format!("Loading zone at: {}", url));
         
         let request = Request::get(url)
