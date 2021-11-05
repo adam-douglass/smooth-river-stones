@@ -12,6 +12,7 @@ A micro game engine for choose your own adventure stories.
 
 - scroll back 
 - item details
+- multiple files
 
 ## Bugs
 
