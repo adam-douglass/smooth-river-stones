@@ -2,8 +2,9 @@ use std::collections::HashMap;
 use std::ops::Deref;
 use std::{collections::VecDeque, rc::Rc};
 
-use web_sys::MouseEvent;
-use yew::services::ConsoleService;
+use web_sys::{KeyboardEvent, MouseEvent};
+use yew::services::keyboard::KeyListenerHandle;
+use yew::services::{ConsoleService, KeyboardService};
 use yew::{Component, ComponentLink, Html, Properties, html};
 
 use crate::zone::{Command, FilterOperation, Line, LineFilter, Scene, TextLine, TextLink, TextPart, Zone};
@@ -43,6 +44,7 @@ pub enum Message {
     LinkClick(TextLink),
     NextLine(MouseEvent),
     Reset(MouseEvent),
+    KeyboardEvent(KeyboardEvent),
 }
 
 #[derive(Properties, Clone)]
@@ -54,6 +56,7 @@ pub struct Display {
     link: ComponentLink<Self>,
     zone: Rc<Zone>,
     state: State,
+    _event_handle: KeyListenerHandle
 }
 
 type DoAdvanceLine = bool;
@@ -317,11 +320,13 @@ impl Component for Display {
     type Properties = DisplayProperties;
 
     fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
+        let event_listener = KeyboardService::register_key_press(&web_sys::window().unwrap(), (&link).callback(|e: KeyboardEvent| Message::KeyboardEvent(e)));
         Self {
             link,
             zone: props.zone,
             state: State::new(),
-        }
+            _event_handle: event_listener
+        }        
     }
 
     fn update(&mut self, msg: Self::Message) -> yew::ShouldRender {
@@ -350,6 +355,18 @@ impl Component for Display {
                 ConsoleService::info("Reset");
                 self.state = State::new();
                 true
+            },
+            Message::KeyboardEvent(event) => {
+                if self.state.status == Status::Running {
+                    if !self.current_scene().branch {
+                        if event.key() == " " {
+                            self.publish_current();
+                            self.advance_line(true);
+                            return true
+                        }
+                    }
+                }
+                false
             }
         }
     }

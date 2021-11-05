@@ -10,7 +10,6 @@ A micro game engine for choose your own adventure stories.
 
 ## Expected features
 
-- space to advance
 - autosave/load place 
 - scroll back 
 - hidden variables
