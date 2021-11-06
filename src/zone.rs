@@ -533,7 +533,7 @@ fn expr_or(input: &str) -> Result<FilterOperation> {
 }
 
 fn or_operator(input: &str) -> Result<Ops> {
-    let (input, (_, content, _)) = tuple((skip_ws, tag("or"), skip_ws))(input)?;
+    let (input, (_, _, _)) = tuple((skip_ws, tag("or"), skip_ws))(input)?;
     Ok((input, Ops::Or))
 }
 
@@ -552,7 +552,7 @@ fn expr_and(input: &str) -> Result<FilterOperation> {
 
 // equal_operator = {"=" | "!="}
 fn and_operator(input: &str) -> Result<Ops> {
-    let (input, (_, content, _)) = tuple((skip_ws, tag("and"), skip_ws))(input)?;
+    let (input, (_, _, _)) = tuple((skip_ws, tag("and"), skip_ws))(input)?;
     Ok((input, Ops::And))
 }
 
