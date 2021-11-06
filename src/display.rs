@@ -166,6 +166,20 @@ impl Display {
                     crate::zone::Ops::Lte => (self.eval_filter(&call.left) <= self.eval_filter(&call.right)) as i32,
                     crate::zone::Ops::Eq => (self.eval_filter(&call.left) == self.eval_filter(&call.right)) as i32,
                     crate::zone::Ops::Ne => (self.eval_filter(&call.left) != self.eval_filter(&call.right)) as i32,
+                    crate::zone::Ops::And => 
+                        if self.eval_filter(&call.left) != 0 {
+                            self.eval_filter(&call.right)
+                        } else {
+                            0
+                        },
+                    crate::zone::Ops::Or => {
+                        let left = self.eval_filter(&call.left);
+                        if left != 0 {
+                            left
+                        } else {
+                            self.eval_filter(&call.right)
+                        }
+                    },
                 }
             },
             FilterOperation::IntLiteral(lit) => *lit,

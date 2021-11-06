@@ -54,6 +54,8 @@ pub enum Ops {
     Lte,
     Eq,
     Ne,
+    And,
+    Or,
 }
 
 #[derive(Debug, Clone)]
@@ -351,7 +353,7 @@ fn line_end(input: &str) -> Result<()> {
 }
 
 fn comment(input: &str) -> Result<()> {   
-    let (input, _) = tuple((tag("---"), is_not("\n\r")))(input)?;
+    let (input, _) = tuple((tag("--"), is_not("\n\r")))(input)?;
     Ok((input, ()))
 }
 
@@ -384,7 +386,7 @@ fn sub_block(input: &str) -> Result<Entry> {
 
 // symbol = ${ ASCII_ALPHANUMERIC ~ (ASCII_ALPHANUMERIC | "-")* } 
 fn symbol(input: &str) -> Result<String> {
-    let (input, (first, parts)) = pair(alphanumeric1, many0(alt((alphanumeric1, is_a("-")))))(input)?;
+    let (input, (first, parts)) = pair(alphanumeric1, many0(alt((alphanumeric1, is_a("-_")))))(input)?;
     Ok((input, first.to_string() + &parts.concat().to_string()))
 }
 
@@ -514,8 +516,46 @@ fn line_filter(input: &str) -> Result<LineFilter> {
 
 // filter_expr = !{ expr_equal } 
 fn filter_expr(input: &str) -> Result<FilterOperation> {
-    expr_equal(input)
+    expr_or(input)
 }
+
+fn expr_or(input: &str) -> Result<FilterOperation> {
+    let (input, (first, additional)) = pair(expr_and, many0(pair(or_operator, expr_and)))(input)?;
+    let mut out = first;
+    for (op, expr) in additional {
+        out = FilterOperation::OperatorCall(Box::new(OperatorCall{
+            operator: op,
+            left: out,
+            right: expr
+        }));
+    }
+    Ok((input, out))
+}
+
+fn or_operator(input: &str) -> Result<Ops> {
+    let (input, (_, content, _)) = tuple((skip_ws, tag("or"), skip_ws))(input)?;
+    Ok((input, Ops::Or))
+}
+
+fn expr_and(input: &str) -> Result<FilterOperation> {
+    let (input, (first, additional)) = pair(expr_equal, many0(pair(and_operator, expr_equal)))(input)?;
+    let mut out = first;
+    for (op, expr) in additional {
+        out = FilterOperation::OperatorCall(Box::new(OperatorCall{
+            operator: op,
+            left: out,
+            right: expr
+        }));
+    }
+    Ok((input, out))
+}
+
+// equal_operator = {"=" | "!="}
+fn and_operator(input: &str) -> Result<Ops> {
+    let (input, (_, content, _)) = tuple((skip_ws, tag("and"), skip_ws))(input)?;
+    Ok((input, Ops::And))
+}
+
 
 // expr_equal = { expr_comp ~ (equal_operator ~ expr_comp)*}
 fn expr_equal(input: &str) -> Result<FilterOperation> {
@@ -533,8 +573,8 @@ fn expr_equal(input: &str) -> Result<FilterOperation> {
 
 // equal_operator = {"=" | "!="}
 fn equal_operator(input: &str) -> Result<Ops> {
-    let (input, (_, content, _)) = tuple((skip_ws, alt((tag("!="), tag("="))), skip_ws))(input)?;
-    if content == "=" {
+    let (input, (_, content, _)) = tuple((skip_ws, alt((tag("!="), tag("=="), tag("="))), skip_ws))(input)?;
+    if content == "=" || content == "==" {
         Ok((input, Ops::Eq))
     } else {
         Ok((input, Ops::Ne))
