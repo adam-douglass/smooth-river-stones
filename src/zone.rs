@@ -92,6 +92,7 @@ pub enum TextPart {
 #[derive(Debug, Clone)]
 pub struct TextLine {
     pub filter: Option<LineFilter>,
+    pub include_in_summary: bool,
     pub parts: Vec<TextPart>
 }
 
@@ -466,8 +467,13 @@ fn item_change(input: &str) -> Result<(String, i32)> {
 
 // text_line = ${ line_filter? ~ (text_fragment | link)+ }
 fn text_line(input: &str) -> Result<Entry> {
-    let (input, (filter, body)) = pair(opt(line_filter), many1(text_part))(input)?;
-    Ok((input, Entry::Line(Line::TextLine(TextLine{filter, parts: body}))))
+    let (input, (include, filter, body)) = tuple((include_operator, opt(line_filter), many1(text_part)))(input)?;
+    Ok((input, Entry::Line(Line::TextLine(TextLine{filter, include_in_summary: include, parts: body}))))
+}
+
+fn include_operator(input: &str) -> Result<bool> {
+    let (input, found  ) = opt(tuple((tag("?"), skip_ws)))(input)?;
+    Ok((input, found.is_some()))
 }
 
 fn text_part(input: &str) -> Result<TextPart> {

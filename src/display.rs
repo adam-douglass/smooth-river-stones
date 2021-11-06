@@ -200,8 +200,18 @@ impl Display {
     //     }
     // }
 
-    fn publish_link(&mut self, text: &String) {
-        self.state.log.push_back(self.render_inactive_link(text))
+    fn publish_link(&mut self, link: &TextLink) {
+        let scene = self.current_scene().clone();
+        if scene.branch {
+            for line in scene.lines.iter() {
+                if let Line::TextLine(text) = line {
+                    if text.include_in_summary {
+                        self.state.log.push_back(self.render_inactive(&line))
+                    }
+                }
+            }
+        }
+        self.state.log.push_back(self.render_inactive_link(&link.text))
     }
 
     fn render_inactive_link(&self, text: &String) -> String {
@@ -385,7 +395,7 @@ impl Component for Display {
             Message::LinkClick(target) => {
                 if self.state.status == Status::Running {
                     ConsoleService::info(&format!("Click link: {}", target.destination));
-                    self.publish_link(&target.text);
+                    self.publish_link(&target);
                     self.follow_link(&target.destination);
                     self.save();
                     true
