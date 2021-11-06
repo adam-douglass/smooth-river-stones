@@ -660,7 +660,7 @@ fn prod_operator(input: &str) -> Result<Ops> {
 
 // expr_atom = _{ ("(" ~ filter_expr ~ ")") | count_visits | int_literal }
 fn expr_atom(input: &str) -> Result<FilterOperation> {
-    alt((sub_expr, count_visits, count_items, read_variable, int_literal))(input)
+    alt((sub_expr, int_literal, count_visits, count_items, read_variable))(input)
 }
 
 fn sub_expr(input: &str) -> Result<FilterOperation> {
