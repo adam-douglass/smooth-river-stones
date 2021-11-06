@@ -4,7 +4,7 @@ default:
     After a long walk, you come to a fork in the road.
 
 fork: ??
-    Which way should you go?
+    ? Which way should you go?
     [left | I want to walk left.]
     [right | Right is the way for me.]
 
