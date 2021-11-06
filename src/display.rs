@@ -48,7 +48,7 @@ impl State {
 
 
 pub enum Message {
-    LinkClick(TextLink),
+    LinkClick(MouseEvent, TextLink),
     NextLine(MouseEvent),
     Reset(MouseEvent),
     KeyboardEvent(KeyboardEvent),
@@ -135,7 +135,7 @@ impl Display {
                 TextPart::Link(link) => {
                     let click = self.link.callback({
                         let dest = Rc::new(link.clone());
-                        move |_| Message::LinkClick(dest.deref().clone())
+                        move |x| Message::LinkClick(x, dest.deref().clone())
                     });
                     html!{
                     <span class="inline-button" name={link.destination.clone()} onclick={click}>
@@ -406,7 +406,8 @@ impl Component for Display {
 
     fn update(&mut self, msg: Self::Message) -> yew::ShouldRender {
         match msg {
-            Message::LinkClick(target) => {
+            Message::LinkClick(event, target) => {
+                event.stop_propagation();
                 if self.state.status == Status::Running {
                     ConsoleService::info(&format!("Click link: {}", target.destination));
                     self.publish_link(&target);
@@ -417,7 +418,8 @@ impl Component for Display {
                     false
                 }
             },
-            Message::NextLine(_) => {
+            Message::NextLine(event) => {
+                event.stop_propagation();
                 if self.state.status == Status::Running {
                     ConsoleService::info("Next line");
                     self.publish_current();
@@ -428,13 +430,15 @@ impl Component for Display {
                     false
                 }
             },
-            Message::Reset(_) => {
+            Message::Reset(event) => {
+                event.stop_propagation();
                 ConsoleService::info("Reset");
                 self.state = State::new();
                 self.save();
                 true
             },
             Message::KeyboardEvent(event) => {
+                event.stop_propagation();
                 if self.state.status == Status::Running {
                     if !self.current_scene().branch {
                         if event.key() == " " {
