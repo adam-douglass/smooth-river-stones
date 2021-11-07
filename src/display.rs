@@ -68,7 +68,8 @@ pub enum Message {
 
 #[derive(Properties, Clone)]
 pub struct DisplayProperties {
-    pub zone: Rc<Zone>
+    pub zone: Rc<Zone>,
+    pub session_key: String,
 }
 
 pub struct Display {
@@ -76,6 +77,7 @@ pub struct Display {
     zone: Rc<Zone>,
     state: State,
     storage: Option<StorageService>,
+    session_key: String,
     _event_handle: KeyListenerHandle
 }
 
@@ -421,12 +423,10 @@ impl Display {
 
     fn save(&mut self) {
         if let Some(ss) = &mut self.storage {
-            ss.store(STATE_KEY, Json(&self.state));
+            ss.store(&self.session_key, Json(&self.state));
         }
     }
 }
-
-static STATE_KEY: &str = "session";
 
 impl Component for Display {
     type Message = Message;
@@ -442,7 +442,7 @@ impl Component for Display {
         // Load the elapsed time
         let saved_state = match &storage {
             Ok(ss) => {
-                let Json(elapsed_raw) = ss.restore(STATE_KEY);
+                let Json(elapsed_raw) = ss.restore(&props.session_key);
                 elapsed_raw.unwrap_or_else(|_| State::new(&props.zone.initialize))
             },
             Err(_) => State::new(&props.zone.initialize),
@@ -454,6 +454,7 @@ impl Component for Display {
             zone: props.zone,
             state: saved_state,
             storage: storage.ok(),
+            session_key: props.session_key,
             _event_handle: event_listener
         }        
     }

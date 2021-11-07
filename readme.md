@@ -26,7 +26,8 @@ A micro game engine for choose your own adventure stories.
 
 ## Examples
 
-The demo at https://adam-douglass.github.io/smooth-river-stones/ was generated from this example:
+### Basic Choice 
+[This demo](https://adam-douglass.github.io/smooth-river-stones/) was generated from this example:
 
 ```
 default:
@@ -52,3 +53,10 @@ end:
     (fed_duck) You gave those ducks peas!
     *reset
 ```
+
+### Item Management
+
+Using unique items with changing details:
+[Source](https://github.com/adam-douglass/smooth-river-stones/blob/main/static/items.zone),
+[Demo](https://adam-douglass.github.io/smooth-river-stones/?zone=static/items.zone&session=items)
+

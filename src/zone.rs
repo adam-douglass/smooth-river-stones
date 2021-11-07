@@ -285,7 +285,7 @@ impl Zone {
 
 pub fn build_world(data: String) -> Option<Rc<Zone>> {
     ConsoleService::info("Parsing Zone");
-    ConsoleService::info(&data);
+    // ConsoleService::info(&data);
     
     match parse_zone(&data) {
         Ok((extra, mut zone)) => {
@@ -298,7 +298,7 @@ pub fn build_world(data: String) -> Option<Rc<Zone>> {
             }
 
             zone.correct();            
-            ConsoleService::info(&format!("{:#?}", zone));
+            // ConsoleService::info(&format!("{:#?}", zone));
             Some(Rc::new(zone))
         },
         Err(err) => {
@@ -340,13 +340,13 @@ fn parse_zone(input: &str) -> Result<Zone> {
         pair(tag("---"), many1(line_end))
     )(input) {
         Result::Ok(val) => val,
-        Result::Err(err) => {
-            let mess = match err {
-                Err::Incomplete(_) => "needed".to_string(),
-                Err::Error(err) => convert_error::<&str>(&input, err),
-                Err::Failure(err) => convert_error::<&str>(&input, err),
-            };
-            ConsoleService::error(&format!("Header parsing:\n{}", mess));
+        Result::Err(_err) => {
+            // let mess = match err {
+            //     Err::Incomplete(_) => "needed".to_string(),
+            //     Err::Error(err) => convert_error::<&str>(&input, err),
+            //     Err::Failure(err) => convert_error::<&str>(&input, err),
+            // };
+            // ConsoleService::error(&format!("Header parsing:\n{}", mess));
             (input, vec![])
         }
     };

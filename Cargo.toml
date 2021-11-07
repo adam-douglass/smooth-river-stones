@@ -12,6 +12,7 @@ nom = "7"
 
 serde = "1"
 serde_json = "1"
+url = "2"
 
 [dependencies.web-sys]
 version = "0.3"
