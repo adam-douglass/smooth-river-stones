@@ -2,14 +2,15 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use nom::branch::alt;
-use nom::character::complete::{alphanumeric1, digit1, line_ending};
-use nom::error::{VerboseError, convert_error};
+use nom::character::complete::{alphanumeric1, digit1, line_ending, multispace0};
+use nom::error::{ParseError, VerboseError, convert_error};
 use nom::multi::{many0, many1, many_till};
-use nom::sequence::{pair, tuple};
-use nom::bytes::complete::{is_a, is_not, tag};
+use nom::sequence::{delimited, pair, preceded, separated_pair, terminated, tuple};
+use nom::bytes::complete::{is_a, tag};
 use nom::{IResult, Err};
 use nom::combinator::{eof, opt};
 
+use serde::{Deserialize, Serialize};
 use yew::services::ConsoleService;
 
 fn parent(val: &String) -> String {
@@ -33,9 +34,28 @@ pub struct SetCommand {
     pub value: i32
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Item {
+    pub key: String,
+    pub name: Option<String>,
+    pub details: Option<String>,
+}
+
+impl Item {
+    pub fn update(&mut self, other: &Item) {
+        if let Some(val) = &other.name {
+            self.name = Some(val.clone());
+        }
+        if let Some(val) = &other.details {
+            self.details = Some(val.clone());
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Command {
     Item(ItemCommand),
+    SetItem(Item),
     Next(String),
     End,
     Reset,
@@ -137,6 +157,7 @@ impl Scene {
                             *value = self._fix_label(&names, value);
                         }
                         Command::Set(_) => {},
+                        Command::SetItem(_) => {},
                     }
                 },
             }
@@ -202,14 +223,16 @@ impl Scene {
 pub struct Zone {
     scenes: Vec<Scene>,
     lookup: HashMap<String, usize>,
+    pub initialize: Vec<Command>,
 }
 
 impl Zone {
-    fn new(scenes: Vec<Scene>) -> Self {
+    fn new(scenes: Vec<Scene>, initialize: Vec<Command>) -> Self {
         let lookup = scenes.iter().enumerate().map(|(i, s)| (s.label.clone(), i)).collect();
         Self {
             scenes,
             lookup,
+            initialize,
         }
     }
 
@@ -292,6 +315,17 @@ pub fn build_world(data: String) -> Option<Rc<Zone>> {
 
 type Result<'a, T> = IResult<&'a str, T, VerboseError<&'a str>>;
 
+fn ws<'a, F: 'a, O, E: ParseError<&'a str>>(inner: F) -> impl FnMut(&'a str) -> IResult<&'a str, O, E>
+  where
+  F: Fn(&'a str) -> IResult<&'a str, O, E>,
+{
+  delimited(
+    multispace0,
+    inner,
+    multispace0
+  )
+}
+
 enum  Entry {
     Line(Line),
     Scene(Vec<Scene>)
@@ -300,9 +334,33 @@ enum  Entry {
 // zone = ${ SOI ~ empty_line* ~ scene* ~ whitespace? ~ EOI }
 fn parse_zone(input: &str) -> Result<Zone> {
     let (input, _) = many0(line_end)(input)?;
+
+    let (input, init) = match terminated(
+        many0(terminated(header_command, many0(line_end))), 
+        pair(tag("---"), many1(line_end))
+    )(input) {
+        Result::Ok(val) => val,
+        Result::Err(err) => {
+            let mess = match err {
+                Err::Incomplete(_) => "needed".to_string(),
+                Err::Error(err) => convert_error::<&str>(&input, err),
+                Err::Failure(err) => convert_error::<&str>(&input, err),
+            };
+            ConsoleService::error(&format!("Header parsing:\n{}", mess));
+            (input, vec![])
+        }
+    };
+    
+    // let (input, init) = opt(terminated(
+    //     many0(terminated(header_command, many1(line_end))), 
+    //     pair(tag("---"), many1(line_end))
+    // ))(input)?;
+
     let (input, (values, _)) = many_till(parse_scene, eof)(input)?;
 
-    Ok((input, Zone::new(values.concat())))
+    // let init = init.unwrap_or(Default::default());
+
+    Ok((input, Zone::new(values.concat(), init.into_iter().collect())))
 }
 
 // scene = ${ dialog | branch }
@@ -348,14 +406,14 @@ fn label(input: &str) -> Result<String> {
 // line_end = _{ whitespace? ~ endl }
 // empty_line = _{ line_end | COMMENT }
 fn line_end(input: &str) -> Result<()> {   
-    let (input, _) = tuple((many0(tag(" ")), opt(comment), line_ending))(input)?;
+    let (input, _) = tuple((many0(tag(" ")), line_ending))(input)?;
     Ok((input, ()))
 }
 
-fn comment(input: &str) -> Result<()> {   
-    let (input, _) = tuple((tag("--"), is_not("\n\r")))(input)?;
-    Ok((input, ()))
-}
+// fn comment(input: &str) -> Result<()> {   
+// let (input, _) = tuple((tag("--"), is_not("\n\r")))(input)?;
+// Ok((input, ()))
+// }
 
 // dialog_multiple_lines = ${ 
 //     PUSH(whitespace) ~ line 
@@ -398,9 +456,36 @@ fn var_symbol(input: &str) -> Result<String> {
 
 // command = ${ "*" ~ whitespace* ~ (item_command) }
 fn command(input: &str) -> Result<Entry> {
-    let (input, (_, _, command)) = tuple((tag("*"), many0(tag(" ")), alt((item_command, next_command, end_command, reset_command, set_command))))(input)?;
+    let (input, (_, _, command)) = tuple((tag("*"), many0(tag(" ")), alt((set_item_command, item_command, next_command, end_command, reset_command, set_command))))(input)?;
     let line = Line::CommandLine(command);
     Ok((input, Entry::Line(line)))
+}
+
+fn header_command(input: &str) -> Result<Command> {
+    preceded(tuple((tag("*"), many0(tag(" ")))), alt((set_item_command, set_command)))(input)
+}
+
+fn set_item_command(input: &str) -> Result<Command> {
+    let (input, key) = delimited(ws(tag("set_item")), symbol, line_end)(input)?;
+    let (input, prefix) = is_a(" ")(input)?;
+    let (input, first_line) = set_item_line(input)?;
+    let (input, lines) = many0(preceded(tag(prefix), set_item_line))(input)?;
+    
+    let mut values: HashMap<String, String> = lines.into_iter().collect();
+    values.insert(first_line.0, first_line.1);
+
+    Ok((input, Command::SetItem(Item{
+        key,
+        name: values.remove("name"),
+        details: values.remove("details"), 
+    })))
+}
+
+fn set_item_line(input: &str) -> Result<(String, String)> {
+    terminated(
+        separated_pair(symbol, ws(tag(":")), raw_text_fragment),
+        many1(line_end),
+    )(input)
 }
 
 // item_command = ${"item" ~ (whitespace? ~ ("+" | "-") ~ whitespace? ~ symbol)+ }

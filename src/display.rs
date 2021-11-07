@@ -11,7 +11,7 @@ use yew::{Component, ComponentLink, Html, Properties, html};
 
 use serde::{Deserialize, Serialize};
 
-use crate::zone::{Command, FilterOperation, Line, LineFilter, Scene, TextLine, TextLink, TextPart, Zone};
+use crate::zone::{Command, FilterOperation, Item, Line, LineFilter, Scene, TextLine, TextLink, TextPart, Zone};
 use crate::raw::Raw;
 
 #[derive(PartialEq, Deserialize, Serialize)]
@@ -27,20 +27,32 @@ pub struct State {
     scene: String,
     line: usize,
     inventory: HashMap<String, i32>,
+    items: HashMap<String, Item>,
     visits: HashMap<String, u32>,
     values: HashMap<String, i32>,
     status: Status,
 }
 
 impl State {
-    pub fn new() -> Self {
+    pub fn new(init: &Vec<Command>) -> Self {
         Self {
             log: Default::default(),
             scene: String::from("default"),
             line: 0,
             inventory: Default::default(),
+            items: init.iter().fold(Default::default(), |mut acc, val|{
+                if let Command::SetItem(item) = val {
+                    acc.insert(item.key.clone(), item.clone());
+                }
+                acc
+            }),
             visits: Default::default(),
-            values: Default::default(),
+            values: init.iter().fold(Default::default(), |mut acc, val|{
+                if let Command::Set(cmd) = val {
+                    acc.insert(cmd.name.clone(), cmd.value);
+                }
+                acc
+            }),
             status: Status::Running,
         }
     }
@@ -103,10 +115,23 @@ impl Display {
         }
     }
     fn build_inventory(&self) -> Html {
-        let tags: Vec<Html> = self.state.inventory.iter().map(|(name, count)| html!{
-            <span>{count}{" x "}<span class="tag">{name.clone()}</span></span>
+        let tags: Vec<Html> = self.state.inventory.iter().map(|(name, count)| {
+            if let Some(item) = self.state.items.get(name) {
+                if let Some(name) = &item.name {
+                    return html!{
+                        <span class="item"><span class="label">{count}{" x "}</span><span class="tag">
+                            {name.clone()}
+                        </span></span>
+                    }
+                }
+            }
+            html!{
+                <span class="item"><span class="label">{count}{" x "}</span><span class="tag">
+                    {name}
+                </span></span>
+            }
         }).collect();
-        html!{<div>
+        html!{<div class="item-box">
             {tags}
         </div>}
     }
@@ -332,6 +357,17 @@ impl Display {
                 self.state.values.insert(cmd.name.clone(), cmd.value);
                 true
             },
+            Command::SetItem(item) => {
+                match self.state.items.get_mut(&item.key) {
+                    Some(val) => {
+                        val.update(item);
+                    },
+                    None => {
+                        self.state.items.insert(item.key.clone(), item.clone());
+                    },
+                }
+                true
+            },
         }
     }
 
@@ -389,9 +425,9 @@ impl Component for Display {
         let saved_state = match &storage {
             Ok(ss) => {
                 let Json(elapsed_raw) = ss.restore(STATE_KEY);
-                elapsed_raw.unwrap_or_else(|_| State::new())
+                elapsed_raw.unwrap_or_else(|_| State::new(&props.zone.initialize))
             },
-            Err(_) => State::new(),
+            Err(_) => State::new(&props.zone.initialize),
         };
 
         let event_listener = KeyboardService::register_key_press(&web_sys::window().unwrap(), (&link).callback(|e: KeyboardEvent| Message::KeyboardEvent(e)));        
@@ -433,7 +469,7 @@ impl Component for Display {
             Message::Reset(event) => {
                 event.stop_propagation();
                 ConsoleService::info("Reset");
-                self.state = State::new();
+                self.state = State::new(&self.zone.initialize);
                 self.save();
                 true
             },

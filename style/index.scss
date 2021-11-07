@@ -37,7 +37,7 @@ body {
     display: flex;
     flex-direction: column;
     padding: 0.7em;
-    max-width: 80em;
+    max-width: 35em;
     // justify-content: stretch;
     justify-content: end;
     min-height: min-content;
@@ -45,11 +45,17 @@ body {
 
 .footer-row {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     align-items: center;
     justify-content: space-around;
     height: 40%;
 }
+
+@media only screen and (min-width: 500px) {
+    .footer-row {
+        flex-direction: row;
+    }    
+} 
 
 .next-area {
     padding: 5em;
@@ -90,14 +96,14 @@ body {
 }
 
 @keyframes glow {
-  from {
-    // text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #e60073, 0 0 40px #e60073, 0 0 50px #e60073, 0 0 60px #e60073, 0 0 70px #e60073;
-    text-shadow: 0 0 5px rgb(99, 16, 88), 0 0 15px rgba(99, 16, 88, 0.5);
-  }
-  to {
-    // text-shadow: 0 0 20px #fff, 0 0 30px #ff4da6, 0 0 40px #ff4da6, 0 0 50px #ff4da6, 0 0 60px #ff4da6, 0 0 70px #ff4da6, 0 0 80px #ff4da6;
-    text-shadow: 0 0 15px rgba(99, 16, 88, 0.5);
-  }
+    from {
+        // text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #e60073, 0 0 40px #e60073, 0 0 50px #e60073, 0 0 60px #e60073, 0 0 70px #e60073;
+        text-shadow: 0 0 5px rgba(99, 16, 88, 0.5), 0 0 15px rgba(99, 16, 88, 0.0);
+    }
+    to {
+        // text-shadow: 0 0 20px #fff, 0 0 30px #ff4da6, 0 0 40px #ff4da6, 0 0 50px #ff4da6, 0 0 60px #ff4da6, 0 0 70px #ff4da6, 0 0 80px #ff4da6;
+        text-shadow: 0 0 15px rgba(99, 16, 88, 0.2);
+    }
 }
 
 .clickable-region {
@@ -125,5 +131,51 @@ body {
 
     ion-icon {
         font-size: 100px;
+    }
+}
+
+.item-box {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-around;
+}
+
+.item {
+    height: 2em;
+    justify-content: center;
+    align-items: center;
+    display: inline-flex;
+    line-height: 1.5;
+    flex-direction: row;
+    vertical-align: middle;
+    font-family: 'Courier New', Courier, monospace;
+
+    .label {
+        align-items: center;
+        background-color: rgba(119, 96, 108, 1);
+        border-radius: 0.35em 0 0 0.35em;
+        font-size: 0.75rem;
+        height: 2em;
+        position: relative;
+        right: -0.35em;
+        padding: 0px 0.75em 0px 0.75em;
+        line-height: 1.5;
+        justify-content: center;
+        display: inline-flex;
+    }
+
+    .tag {
+        align-items: center;
+        background-color: rgba(99, 16, 88, 0.2);
+        border-radius: 0.35em;
+        font-size: 0.75rem;
+        height: 2em;
+        padding: 0px 0.75em 0px 0.75em;
+        line-height: 1.5;
+        justify-content: center;
+        flex-direction: row;
+        display: inline-flex;
     }
 }
