@@ -1,0 +1,57 @@
+
+
+*set_item rose_letter
+    name: Rose embossed letter
+    details: A letter found in a book about growing roses. It has a rose shape embossed in it.
+*set_item hat_letter
+    name: ??? letter
+    detail: A letter found tucked in a book about cults.
+
+---
+
+default:
+    You find the bookshelf described in the note. 
+
+choice: ??
+    ? There seem to be three books with red covers.
+    ($rose_letter < 1) [unvisited_horticulture | "The Definitive History of the Horticulture of Roses"]
+    ($rose_letter == 1) [visited_horticulture | "The Definitive History of the Horticulture of Roses"]
+    [biggest | "The Biggest Book on Freezers"]
+    ($hat_letter < 1) [unvisited_hat | "The Red Hatters and Other Subversive Cults"]
+    ($hat_letter == 1) [visited_hat | "The Red Hatters and Other Subversive Cults"]
+    ($hat_letter == 1 and #examine_hat_letter == 0) [examine_hat_letter | Look closer at the letter.]
+    ($rose_letter and $hat_letter) [next | Thats both letters, I'm done here.]
+
+    unvisited_horticulture:
+        This book on gardening is massive.
+        You give it a shake, a letter with a rose seal falls out.
+        Its written in code just like the rest.
+        *item +rose_letter        
+
+    visited_horticulture:
+        You thumb through the book. It seems as comprehensive as the title and heft would suggest.
+
+    unvisited_hat:
+        A foreign book on the sorts of strange religious factions and groups.
+        Inside the back cover is another letter, you'll need to go back to the cypher key in the study to read it.
+        *item +hat_letter
+
+    visited_hat:
+        You're fairly certain you won't need to know anything more about foreign cults.
+        If it comes up later, you know where to look.
+
+    examine_hat_letter:
+        Looking closer at the letter you see it is embossed with a hat.
+        *set_item hat_letter
+            name: Hat embossed letter
+            detail: A letter found tucked in a book about cults. It has a hat shape embossed into it.
+
+    biggest:
+        The Biggest Book on Freezers isn't quite what you expected.
+        Its a collection of poetry themed around winter.
+        You enjoy the theme, but otherwise nothing is out of place.
+
+next:
+    Back to the study to decode those letters.
+    *reset
+
