@@ -474,10 +474,20 @@ fn set_item_command(input: &str) -> Result<Command> {
     let mut values: HashMap<String, String> = lines.into_iter().collect();
     values.insert(first_line.0, first_line.1);
 
+    let name = values.remove("name");
+    let mut details = values.remove("details");
+    if details.is_none() {
+        details = values.remove("detail");
+    } 
+
+    for extra_name in values.keys(){
+        ConsoleService::error(&format!{"Unexpected key {} found in item data for {}", extra_name, key})
+    }
+
     Ok((input, Command::SetItem(Item{
         key,
-        name: values.remove("name"),
-        details: values.remove("details"), 
+        name,
+        details, 
     })))
 }
 

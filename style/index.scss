@@ -41,6 +41,7 @@ body {
     // justify-content: stretch;
     justify-content: end;
     min-height: min-content;
+    
 }
 
 .footer-row {
@@ -151,6 +152,8 @@ body {
     flex-direction: row;
     vertical-align: middle;
     font-family: 'Courier New', Courier, monospace;
+    margin-left: 1em;
+    margin-bottom: 1em;
 
     .label {
         align-items: center;
@@ -164,6 +167,8 @@ body {
         line-height: 1.5;
         justify-content: center;
         display: inline-flex;
+        box-shadow: 0px 1px 0px rgba(99, 16, 88, 1);
+
     }
 
     .tag {
@@ -177,5 +182,110 @@ body {
         justify-content: center;
         flex-direction: row;
         display: inline-flex;
+        box-shadow: 1px 1px 0px rgba(99, 16, 88, 1);
     }
 }
+
+
+.tooltip {
+    position: relative;
+    display: inline-block;
+    // border-bottom: 1px dotted black;
+}
+
+/* Tooltip text */
+.tooltip .tooltiptext {
+    visibility: hidden;
+    width: 220px;
+    background-color: #555;
+    color: #fff;
+    text-align: center;
+    padding: 0.5em;
+    border-radius: 6px;
+  
+    /* Position the tooltip text */
+    position: absolute;
+    z-index: 1;
+    bottom: 225%;
+    left: -50%;
+  
+    /* Fade in tooltip */
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  
+  /* Tooltip arrow */
+  .tooltip .tooltiptext::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #555 transparent transparent transparent;
+  }
+  
+  /* Show the tooltip text when you mouse over the tooltip container */
+  .tooltip:hover .tooltiptext {
+    visibility: visible;
+    opacity: 0.85;
+  }
+
+  
+.infobox {
+    // position: relative;
+    // display: inline-block;
+    // border-bottom: 1px dotted black;
+    cursor: help;
+}
+
+/* Tooltip text */
+.infobox .infoboxtext {
+    visibility: hidden;
+    width: 100%;
+    background-color: #555;
+    color: #fff;
+    text-align: center;
+    padding: 0.5em 0 0.5em 0;
+    // border-radius: 6px;
+  
+    /* Position the tooltip text */
+    position: absolute;
+    z-index: 100;
+    left: 0;
+    bottom: 40%;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+  
+    /* Fade in tooltip */
+    opacity: 0;
+    transition: opacity 0.3s;
+
+    .infoboxinner {
+        max-width: 30em;
+    }
+  
+}
+  
+//   /* Tooltip arrow */
+//   .infobox .infoboxtext
+
+//   .infobox .infoboxtext::backdrop {
+//     content: "";
+//     position: absolute;
+//     top: 100%;
+//     left: 50%;
+//     margin-left: -5px;
+//     border-width: 5px;
+//     border-style: solid;
+//     border-color: #555 transparent transparent transparent;
+//   }
+  
+  /* Show the tooltip text when you mouse over the tooltip container */
+  .infobox:hover .infoboxtext {
+    visibility: visible;
+    opacity: 1;
+    animation: arrive 1s ease-in-out 0 1;
+  }

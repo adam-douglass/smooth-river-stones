@@ -118,10 +118,28 @@ impl Display {
         let tags: Vec<Html> = self.state.inventory.iter().map(|(name, count)| {
             if let Some(item) = self.state.items.get(name) {
                 if let Some(name) = &item.name {
+                    let details = if let Some(detail) = &item.details {
+                        if detail.len() > 0 {
+                            html!{<div class="infoboxtext"><div class="infoboxinner">{detail.clone()}</div></div>}
+                        } else {
+                            html!{}
+                        }
+                    } else {
+                        html!{}
+                    };
+
+                    let counter = if count > &1 {
+                        html!{<span class="label">{count}{" x "}</span>}
+                    } else {
+                        html!{}
+                    };
+
                     return html!{
-                        <span class="item"><span class="label">{count}{" x "}</span><span class="tag">
-                            {name.clone()}
-                        </span></span>
+                        <span class="item infobox">
+                            {counter}
+                            <span class="tag">{name.clone()}</span>
+                            {details}
+                        </span>
                     }
                 }
             }
